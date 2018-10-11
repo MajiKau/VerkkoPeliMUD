@@ -20,19 +20,19 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="server.h">
+    <ClInclude Include="headers\structs.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="client.h">
+    <ClInclude Include="headers\messages.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="curses_windows.h">
+    <ClInclude Include="headers\server.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="messages.h">
+    <ClInclude Include="headers\curses_windows.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="structs.h">
+    <ClInclude Include="headers\client.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
