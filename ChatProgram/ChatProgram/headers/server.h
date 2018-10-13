@@ -70,7 +70,7 @@ ENetHost * CreateServer()
 		0      /* assume any amount of outgoing bandwidth */);
 	if (server == NULL)
 	{
-		wprintw(stdscr, "An error occurred while trying to create an ENet server host.");
+		wprintw(win_system, "An error occurred while trying to create an ENet server host.");
 		exit(EXIT_FAILURE);
 	}
 
@@ -101,7 +101,7 @@ void DisconnectPeer(ENetPeer* peer, ENetHost* client)
 			enet_packet_destroy(event.packet);
 			break;
 		case ENET_EVENT_TYPE_DISCONNECT:
-			wprintw(stdscr, "Disconnection succeeded.");
+			wprintw(win_system, "Disconnection succeeded.");
 			return;
 
 
@@ -146,7 +146,7 @@ void ServerThread(int id, ENetHost* server, bool* running)
 			switch (event.type)
 			{
 			case ENET_EVENT_TYPE_CONNECT:
-				wprintw(stdscr, "A new client connected from %x:%u.",
+				wprintw(win_system, "A new client connected from %x:%u.",
 					event.peer->address.host,
 					event.peer->address.port);
 				/* Store any relevant client information here. */
@@ -172,12 +172,12 @@ void ServerThread(int id, ENetHost* server, bool* running)
 						}
 					}
 
-					wprintw(stdscr, "[%s]", msg_pack->message);
+					wprintw(win_system, "[%s]", msg_pack->message);
 					break;
 				case movement:
 					move_pack = (MovePacket*)event.packet->data;
 					HandleMovement(move_pack);
-					wprintw(stdscr, "[%c]", move_pack->message);
+					wprintw(win_system, "[%c]", move_pack->message);
 					break;
 				case command:
 					break;
@@ -192,7 +192,7 @@ void ServerThread(int id, ENetHost* server, bool* running)
 
 				pack = (Packet*)event.packet->data;
 
-				wprintw(stdscr, "A packet of length %u was received from %s on channel %u.",
+				wprintw(win_system, "A packet of length %u was received from %s on channel %u.",
 					(unsigned int)event.packet->dataLength,
 					pack->sender,
 					event.channelID);
@@ -203,7 +203,7 @@ void ServerThread(int id, ENetHost* server, bool* running)
 				break;
 
 			case ENET_EVENT_TYPE_DISCONNECT:
-				wprintw(stdscr, "%s disconnected.", (char*)event.peer->data);
+				wprintw(win_system, "%s disconnected.", (char*)event.peer->data);
 				/* Reset the peer's client information. */
 				event.peer->data = NULL;
 				connected_peers.erase(event.peer);

@@ -108,12 +108,14 @@ void InputThread(ENetPeer * peer)
 
 int main(int argc, char ** argv)
 {
-	initscr(); 
-	resize_term(70, 190);
+	
+	InitWindows();
 
 	int w, h;
+
 	getmaxyx(stdscr, h, w);
-	stdscr = MakeWindowWithBorders(19, 90, 0, 0);
+
+	/*stdscr = MakeWindowWithBorders(19, 90, 0, 0);
 
 	win_input = MakeWindowWithBorders(10, 99, 31, 91);
 
@@ -121,7 +123,7 @@ int main(int argc, char ** argv)
 	
 	win_chat = MakeWindowWithBorders(30, 99, 0, 91);
 
-	win_extra = MakeWindowWithBorders(28, 99, 42, 91);
+	win_extra = MakeWindowWithBorders(28, 99, 42, 91);*/
 
 	cbreak();
 	noecho();
@@ -136,8 +138,8 @@ int main(int argc, char ** argv)
 
 	keypad(win_input, TRUE);
 
-	wprintw(stdscr, "Window Y:%i, X:%i\n", h, w);
-	wprintw(stdscr,"This is the stdscr window.\n");
+	wprintw(win_system, "Window Y:%i, X:%i\n", h, w);
+	wprintw(win_system,"This is the system window.\n");
 	wprintw(win_input, "This is the input window.\n");
 	wprintw(win_map, "This is the map window.\n");
 	wprintw(win_extra, "This is the extra window.\n");
@@ -147,22 +149,16 @@ int main(int argc, char ** argv)
 
 	if (enet_initialize() != 0)
 	{
-		wprintw(stdscr, "An error occurred while initializing ENet.");
+		wprintw(win_system, "An error occurred while initializing ENet.");
 		return EXIT_FAILURE;
 	}
 
-	wprintw(stdscr, "1:Server || 2:Client\n");
+	wprintw(win_system, "1:Server || 2:Client\n");
 
-	wrefresh(win_input_borders);
-	refresh();
-
-	wrefresh(win1_borders);
 	wrefresh(win_map);
 
-	wrefresh(win2_borders);
 	wrefresh(win_extra);
 
-	wrefresh(win_chat_borders);
 	wrefresh(win_chat);
 
 	int input = wgetch(win_input);

@@ -15,7 +15,7 @@ ENetPeer * ConnectToHost(ENetHost* client)
 	peer = enet_host_connect(client, &address, 2, 0);
 	if (peer == NULL)
 	{
-		wprintw(stdscr,
+		wprintw(win_system,
 			"No available peers for initiating an ENet connection.\n");
 		exit(EXIT_FAILURE);
 	}
@@ -23,7 +23,7 @@ ENetPeer * ConnectToHost(ENetHost* client)
 	if (enet_host_service(client, &event, 5000) > 0 &&
 		event.type == ENET_EVENT_TYPE_CONNECT)
 	{
-		wprintw(stdscr, "Connection to localhost:8888 succeeded.");
+		wprintw(win_system, "Connection to localhost:8888 succeeded.");
 
 
 		//DO THINGS HERE
@@ -34,7 +34,7 @@ ENetPeer * ConnectToHost(ENetHost* client)
 		/* received. Reset the peer in the event the 5 seconds   */
 		/* had run out without any significant event.            */
 		enet_peer_reset(peer);
-		wprintw(stdscr, "Connection to localhost:8888 failed.");
+		wprintw(win_system, "Connection to localhost:8888 failed.");
 	}
 
 	//DO THINGS HERE
@@ -52,7 +52,7 @@ ENetHost * CreateClient()
 		0 /* assume any amount of incoming bandwidth */);
 	if (client == NULL)
 	{
-		wprintw(stdscr, "An error occurred while trying to create an ENet client host.");
+		wprintw(win_system, "An error occurred while trying to create an ENet client host.");
 		exit(EXIT_FAILURE);
 	}
 
@@ -78,7 +78,7 @@ void ClientThread(int id, ENetHost* client, bool* running)
 			switch (event.type)
 			{
 			case ENET_EVENT_TYPE_CONNECT:
-				wprintw(stdscr, "Someone is trying to connect to a client?");
+				wprintw(win_system, "Someone is trying to connect to a client?");
 				break;
 			case ENET_EVENT_TYPE_RECEIVE:
 
@@ -88,7 +88,7 @@ void ClientThread(int id, ENetHost* client, bool* running)
 
 				if (pack.message == "/stop")
 				{
-					wprintw(stdscr, "Server shutdown");
+					wprintw(win_system, "Server shutdown");
 				}
 
 				/* Clean up the packet now that we're done using it. */
@@ -97,7 +97,7 @@ void ClientThread(int id, ENetHost* client, bool* running)
 				break;
 
 			case ENET_EVENT_TYPE_DISCONNECT:
-				wprintw(stdscr, "Lost connection to server.");
+				wprintw(win_system, "Lost connection to server.");
 				running = false;
 				break;
 			}
