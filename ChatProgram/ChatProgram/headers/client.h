@@ -15,8 +15,8 @@ ENetPeer * ConnectToHost(ENetHost* client)
 	peer = enet_host_connect(client, &address, 2, 0);
 	if (peer == NULL)
 	{
-		wprintw(win_system,
-			"No available peers for initiating an ENet connection.\n");
+		wprintw(win_system, "No available peers for initiating an ENet connection.\n");
+
 		exit(EXIT_FAILURE);
 	}
 	/* Wait up to 5 seconds for the connection attempt to succeed. */
@@ -24,7 +24,6 @@ ENetPeer * ConnectToHost(ENetHost* client)
 		event.type == ENET_EVENT_TYPE_CONNECT)
 	{
 		wprintw(win_system, "Connection to localhost:8888 succeeded.");
-
 
 		//DO THINGS HERE
 	}
@@ -34,6 +33,7 @@ ENetPeer * ConnectToHost(ENetHost* client)
 		/* received. Reset the peer in the event the 5 seconds   */
 		/* had run out without any significant event.            */
 		enet_peer_reset(peer);
+
 		wprintw(win_system, "Connection to localhost:8888 failed.");
 	}
 
@@ -53,6 +53,7 @@ ENetHost * CreateClient()
 	if (client == NULL)
 	{
 		wprintw(win_system, "An error occurred while trying to create an ENet client host.");
+
 		exit(EXIT_FAILURE);
 	}
 
@@ -63,11 +64,162 @@ ENetHost * CreateClient()
 	//enet_host_destroy(client);
 }
 
-void ClientThread(int id, ENetHost* client, bool* running)
+void InputWindowThread(ENetPeer * peer, bool* running) //Not thread safe, do not use
 {
-	ENetEvent event;
+	char name[20];
+	echo();
+	wgetstr(win_input, name);
+	noecho();
+
+	SendMessageToPeer(peer, &JoinP(name));
+
+	char * msg;
+
 	while (running)
 	{
+		wrefresh(win_input);
+
+		char input = wgetch(win_input);
+		switch (input)
+		{
+		case KEY_RESIZE:
+			//UpdateWindowSizes();
+			break;
+		case 'r':
+			break;
+		case 'w':
+			msg = new char[2]{ "w" };
+			SendMessageToPeer(peer, &MovementP(name, input));
+			break;
+		case 'a':
+			msg = new char[2]{ "a" };
+			SendMessageToPeer(peer, &MovementP(name, input));
+			break;
+		case 's':
+			msg = new char[2]{ "s" };
+			SendMessageToPeer(peer, &MovementP(name, input));
+			break;
+		case 'd':
+			msg = new char[2]{ "d" };
+			SendMessageToPeer(peer, &MovementP(name, input));
+			break;
+		case 't':
+
+			msg = new char[1000];
+
+			flushinp();
+			wprintw(win_input, "MSG:");
+			echo();
+
+			wgetstr(win_input, msg);
+
+			noecho();
+			wprintw(win_chat, "%s: %s\n", name, msg);
+
+			if (msg[0] == '/')
+			{
+				if (msg == "/quit")
+				{
+					running = false;
+					break;
+				}
+				if (msg == "/stop")
+				{
+					SendMessageToPeer(peer, &MessageP(name, msg));
+				}
+			}
+			else
+			{
+				SendMessageToPeer(peer, &MessageP(name, msg));
+			}
+			break;
+		default:
+			break;
+		}
+	}
+}
+
+void HandleInput(ENetPeer * peer, std::string name)
+{
+
+	char * msg;
+
+	char input = wgetch(win_input);
+	switch (input)
+	{
+	case KEY_RESIZE:
+		resize_term(0, 0);
+		UpdateWindowSizes();
+		break;
+
+	case 'w':
+		msg = new char[2]{ "w" };
+		SendMessageToPeer(peer, &MovementP(name, input));
+		break;
+	case 'a':
+		msg = new char[2]{ "a" };
+		SendMessageToPeer(peer, &MovementP(name, input));
+		break;
+	case 's':
+		msg = new char[2]{ "s" };
+		SendMessageToPeer(peer, &MovementP(name, input));
+		break;
+	case 'd':
+		msg = new char[2]{ "d" };
+		SendMessageToPeer(peer, &MovementP(name, input));
+		break;
+	case 't':
+
+		msg = new char[1000];
+
+		flushinp();
+		wprintw(win_input, "MSG:");
+		echo();
+
+		wgetstr(win_input, msg);
+
+		noecho();
+		wprintw(win_chat, "%s: %s\n", name, msg);
+
+		if (msg[0] == '/')
+		{
+			if (msg == "/quit")
+			{
+				//running = false;
+				break;
+			}
+			if (msg == "/stop")
+			{
+				SendMessageToPeer(peer, &MessageP(name, msg));
+			}
+		}
+		else
+		{
+			SendMessageToPeer(peer, &MessageP(name, msg));
+		}
+		break;
+	default:
+		break;
+	}
+}
+
+void ClientThread(int id, ENetHost* client, ENetPeer* peer, bool* running)
+{
+	ENetEvent event;
+	nodelay(win_input, true);
+	wprintw(win_input, "Username:");
+
+	char name[20];
+	echo();
+	wgetstr(win_input, name);
+	noecho();
+
+	SendMessageToPeer(peer, &JoinP(name));
+
+	while (running)
+	{
+		HandleInput(peer, name);
+		wprintw(win_system, "-W-");
 		UpdateWindows();
 
 		int enet_int = enet_host_service(client, &event, 0);

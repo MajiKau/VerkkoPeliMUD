@@ -34,109 +34,16 @@ void DestroyClientOrHost(ENetHost * host)
 	enet_host_destroy(host);
 }
 
-void InputThread(ENetPeer * peer)
-{
-	char name[20];
-	wprintw(win_input, "Username:");
-
-	echo();
-	wgetstr(win_input, name);
-	noecho();
-
-	SendMessageToPeer(peer, &JoinP(name));
-
-	char * msg;
-	while (running)
-	{
-		UpdateWindows();
-
-		char input = wgetch(win_input);
-		switch (input)
-		{
-		case 'w':
-			msg = new char[2]{ "w" };
-			SendMessageToPeer(peer, &MovementP(name, input));
-			break;
-		case 'a':
-			msg = new char[2]{ "a" };
-			SendMessageToPeer(peer, &MovementP(name, input));
-			break;
-		case 's':
-			msg = new char[2]{ "s" };
-			SendMessageToPeer(peer, &MovementP(name, input));
-			break;
-		case 'd':
-			msg = new char[2]{ "d" };
-			SendMessageToPeer(peer, &MovementP(name, input));
-			break;
-		case 't':
-
-			msg = new char[1000];
-			flushinp();
-			wprintw(win_input, "MSG:");
-
-			echo();
-			wgetstr(win_input, msg);
-			noecho();
-
-			wprintw(win_chat, "%s: %s\n", name, msg);
-
-			if (msg[0] == '/')
-			{
-				if (msg == "/quit")
-				{
-					running = false;
-					break;
-				}
-				if (msg == "/stop")
-				{
-					SendMessageToPeer(peer, &MessageP(name, msg));
-				}
-			}
-			else
-			{
-				SendMessageToPeer(peer, &MessageP(name, msg));
-			}
-			break;
-		default:
-			break;
-		}
-	}
-}
 
 
 
 int main(int argc, char ** argv)
 {
-	
+	//CreateConsoleScreenBuffer();
+
 	InitWindows();
-
 	int w, h;
-
 	getmaxyx(stdscr, h, w);
-
-	/*stdscr = MakeWindowWithBorders(19, 90, 0, 0);
-
-	win_input = MakeWindowWithBorders(10, 99, 31, 91);
-
-	win_map = MakeWindowWithBorders(50, 90, 20, 0, false);
-	
-	win_chat = MakeWindowWithBorders(30, 99, 0, 91);
-
-	win_extra = MakeWindowWithBorders(28, 99, 42, 91);*/
-
-	cbreak();
-	noecho();
-
-	start_color();
-	PDC_set_blink(true);
-
-	init_pair(1, COLOR_WHITE, COLOR_BLACK);
-	init_pair(2, COLOR_RED, COLOR_GREEN);
-	init_pair(3, COLOR_BLUE, COLOR_GREEN);
-
-
-	keypad(win_input, TRUE);
 
 	wprintw(win_system, "Window Y:%i, X:%i\n", h, w);
 	wprintw(win_system,"This is the system window.\n");
@@ -167,10 +74,10 @@ int main(int argc, char ** argv)
 	{
 		ENetHost* server = CreateServer();
 		std::thread server_thread(ServerThread, 0, server, &running);
-		while (getch() != 'q')
+		/*while (getch() != 'q')
 		{
-
-		}
+			//Wait for input, so blinking text works
+		}*/
 		server_thread.join();
 		DestroyClientOrHost(server);
 	}
@@ -178,11 +85,11 @@ int main(int argc, char ** argv)
 	{
 		ENetHost* client = CreateClient();
 		ENetPeer* peer = ConnectToHost(client);
-		std::thread client_thread(ClientThread, 0, client, &running);
-		std::thread message_thread(InputThread, peer);
+		std::thread client_thread(ClientThread, 0, client, peer, &running);
+		//std::thread message_thread(InputWindowThread, peer, &running);
 		
 		client_thread.join();
-		message_thread.join();
+		//message_thread.join();
 		DisconnectPeer(peer, client);
 		DestroyClientOrHost(client);
 	}

@@ -1,5 +1,5 @@
 #pragma once
-#include "structs.h"
+#include "game_structs.h"
 //#include <enet/enet.h>
 
 char map[80][40];
@@ -120,6 +120,8 @@ void DisconnectPeer(ENetPeer* peer, ENetHost* client)
 
 void ServerThread(int id, ENetHost* server, bool* running)
 {
+	nodelay(win_input, true);
+	//halfdelay(1);
 	ENetEvent event;
 	int num_of_connected_clients = 0;
 	std::string stop_message = "/stop";
@@ -133,6 +135,7 @@ void ServerThread(int id, ENetHost* server, bool* running)
 
 	while (running)
 	{
+		wgetch(win_input);
 
 		PrintMap(map);
 		PrintPlayers(players);

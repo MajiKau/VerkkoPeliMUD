@@ -20,9 +20,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="headers\structs.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="headers\messages.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -33,6 +30,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="headers\client.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="headers\game_structs.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
