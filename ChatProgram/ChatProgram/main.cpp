@@ -4,8 +4,7 @@
 #pragma comment(lib, "enet64.lib")
 #pragma comment(lib, "ws2_32.lib")
 #pragma comment(lib, "winmm.lib")
-#include <enet/enet.h>
-#include <PDCurses/curses.h>
+
 //#include <winsock2.h>
 //#include <stdio.h>
 #include <thread>

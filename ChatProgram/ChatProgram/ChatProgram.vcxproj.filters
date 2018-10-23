@@ -35,5 +35,8 @@
     <ClInclude Include="headers\game_structs.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="headers\file_reader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

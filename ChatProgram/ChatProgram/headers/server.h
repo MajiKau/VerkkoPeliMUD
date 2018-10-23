@@ -1,28 +1,74 @@
-#pragma once
+﻿#pragma once
+#include <enet/enet.h>
+#include <vector>
+
 #include "game_structs.h"
-//#include <enet/enet.h>
+#include "file_reader.h"
 
-char map[80][40];
+char map[128][128];
 
+Tile tile_map[128][128];
 
 
 std::vector<Player> players;
 
 void CreateMap()
 {
-	for (int x = 0; x < 80; x++)
+	
+
+	std::vector<std::vector<char>> map_v = LoadMap("../Content/map.json");
+
+	for (int y = 0; y < 128; y++)
 	{
-		for (int y = 0; y < 40; y++)
+		if (map_v.size() <= y)
 		{
-			char c = ':' + rand() % 4;
-			map[x][y] = c;
+			break;
+		}
+		for (int x = 0; x < 128; x++)
+		{
+			if (map_v[y].size() <= x)
+			{
+				map[x][y] = '\n';
+				break;
+			}
+			//char c = ':' + rand() % 4;
+			//char c = 176 + rand() % 3;
+			//map[x][y] = c;
+			map[x][y] = map_v[y][x];
+
+			switch (map_v[y][x])
+			{
+			case 'S':
+				tile_map[x][y].type = SAND;
+				tile_map[x][y].walkable = true;
+				break;
+			case 'G':
+				tile_map[x][y].type = GRASS;
+				tile_map[x][y].walkable = true;
+				break;
+			case 'B':
+				tile_map[x][y].type = WATER;
+				tile_map[x][y].walkable = false;
+				break;
+			case 'W':
+				tile_map[x][y].type = WALL;
+				tile_map[x][y].walkable = false;
+				break;
+			case '0':
+				tile_map[x][y].type = GROUND;
+				tile_map[x][y].walkable = true;
+				break;
+			default:
+				break;
+			}
 		}
 	}
 }
-void HandleMovement(MovePacket* packet)
+std::string HandleMovement(MovePacket* packet)
 {
 	Player* player = NULL;
 	std::string pa_name(packet->sender);
+	std::string message = "";
 	for (int i = 0; i < players.size(); i++)
 	{
 		std::string pl_name(players[i].name);
@@ -33,25 +79,45 @@ void HandleMovement(MovePacket* packet)
 	}
 	if (player == NULL)
 	{
-		return;
+		return "";
 	}
 	switch (packet->message)
 	{
 	case 'w':
+		if(tile_map[player->x][player->y-1].walkable)
 		player->y -= 1;
 		break;
 	case 'a':
+		if (tile_map[player->x-1][player->y].walkable)
 		player->x -= 1;
 		break;
 	case 's':
+		if (tile_map[player->x][player->y + 1].walkable)
 		player->y += 1;
 		break;
 	case 'd':
+		if (tile_map[player->x+1][player->y].walkable)
 		player->x += 1;
+		break;
+	case 'l':
+		switch (tile_map[player->x][player->y].type)
+		{
+		case GRASS:
+			message = "Green grass.";
+			break;
+		case SAND:
+			message = "Sand.";
+			break;
+		default:
+			message = "You know what that is.";
+			break;
+		}
+		
 		break;
 	default:
 		break;
 	}
+	return message;
 }
 ENetHost * CreateServer()
 {
@@ -120,7 +186,7 @@ void DisconnectPeer(ENetPeer* peer, ENetHost* client)
 
 void ServerThread(int id, ENetHost* server, bool* running)
 {
-	nodelay(win_input, true);
+	//nodelay(win_input, true);
 	//halfdelay(1);
 	ENetEvent event;
 	int num_of_connected_clients = 0;
@@ -133,16 +199,30 @@ void ServerThread(int id, ENetHost* server, bool* running)
 	MovePacket* move_pack;
 	JoinPacket* join_pack;
 
+
+	char c1 = 176;
+
+	char c2 = 177;
+
+	char c3 = 178;
+
+	char c4 = 219;
+
+	wprintw(win_system, "%c(%i),%c(%i),%c(%i),%c(%i)\n", c1, c1, c2, c2, c3, c3, c4, c4);
+
+
 	while (running)
 	{
-		wgetch(win_input);
+		//wgetch(win_input);
 
-		PrintMap(map);
+		//PrintMap(map);
+		PrintMap(tile_map);
 		PrintPlayers(players);
 		UpdateWindows();
 
 		int enet_int = enet_host_service(server, &event, 0);
 		std::string name = "Client:" + std::to_string(num_of_connected_clients);
+		std::string message = "";
 		/* Wait up to 0 milliseconds for an event. */
 		if (enet_int > 0)
 		{
@@ -175,11 +255,18 @@ void ServerThread(int id, ENetHost* server, bool* running)
 						}
 					}
 
+					wprintw(win_chat, "%s: %s\n", msg_pack->sender, msg_pack->message);
+
 					wprintw(win_system, "[%s]", msg_pack->message);
 					break;
 				case movement:
 					move_pack = (MovePacket*)event.packet->data;
-					HandleMovement(move_pack);
+					message = HandleMovement(move_pack);
+					if (message != "")
+					{
+						SendMessageToPeer(event.peer, &MessageP("",message));
+
+					}
 					wprintw(win_system, "[%c]", move_pack->message);
 					break;
 				case command:

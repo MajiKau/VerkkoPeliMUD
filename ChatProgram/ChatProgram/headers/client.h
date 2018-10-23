@@ -1,5 +1,6 @@
 #pragma once
-//#include <enet/enet.h>
+#include <enet/enet.h>
+
 #include "curses_windows.h"
 #include "messages.h"
 
@@ -141,8 +142,8 @@ void InputWindowThread(ENetPeer * peer, bool* running) //Not thread safe, do not
 
 void HandleInput(ENetPeer * peer, std::string name)
 {
-
 	char * msg;
+	std::string str;
 
 	char input = wgetch(win_input);
 	switch (input)
@@ -153,19 +154,18 @@ void HandleInput(ENetPeer * peer, std::string name)
 		break;
 
 	case 'w':
-		msg = new char[2]{ "w" };
 		SendMessageToPeer(peer, &MovementP(name, input));
 		break;
 	case 'a':
-		msg = new char[2]{ "a" };
 		SendMessageToPeer(peer, &MovementP(name, input));
 		break;
 	case 's':
-		msg = new char[2]{ "s" };
 		SendMessageToPeer(peer, &MovementP(name, input));
 		break;
 	case 'd':
-		msg = new char[2]{ "d" };
+		SendMessageToPeer(peer, &MovementP(name, input));
+		break;
+	case 'l':
 		SendMessageToPeer(peer, &MovementP(name, input));
 		break;
 	case 't':
@@ -177,23 +177,24 @@ void HandleInput(ENetPeer * peer, std::string name)
 		echo();
 
 		wgetstr(win_input, msg);
-
 		noecho();
-		wprintw(win_chat, "%s: %s\n", name, msg);
+		wprintw(win_chat, "%s: %s\n", name.c_str(), msg);
 
+		str = std::string(msg);
 		if (msg[0] == '/')
 		{
-			if (msg == "/quit")
+			if (str == "/quit")
 			{
 				//running = false;
+				exit(0);
 				break;
 			}
-			if (msg == "/stop")
+			if (str == "/stop")
 			{
 				SendMessageToPeer(peer, &MessageP(name, msg));
 			}
 		}
-		else
+		else if(str != "")
 		{
 			SendMessageToPeer(peer, &MessageP(name, msg));
 		}
@@ -219,7 +220,7 @@ void ClientThread(int id, ENetHost* client, ENetPeer* peer, bool* running)
 	while (running)
 	{
 		HandleInput(peer, name);
-		wprintw(win_system, "-W-");
+		//wprintw(win_system, "-W-");
 		UpdateWindows();
 
 		int enet_int = enet_host_service(client, &event, 0);

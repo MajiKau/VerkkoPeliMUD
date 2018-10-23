@@ -10,3 +10,28 @@ struct Player
 		y = _y;
 	}
 };
+
+enum tiletype
+{
+	GROUND,
+	GRASS,
+	SAND,
+	WATER,
+	WALL
+};
+
+struct Tile
+{
+	enum tiletype type;
+	bool walkable;
+	Tile(tiletype _type, bool _walkable)
+	{
+		type = type;
+		walkable = walkable;
+	}
+	Tile()
+	{
+		type = WALL;
+		walkable = false;
+	}
+};
