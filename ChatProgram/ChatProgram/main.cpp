@@ -61,11 +61,13 @@ int main(int argc, char ** argv)
 
 	wprintw(win_system, "1:Server || 2:Client\n");
 
-	wrefresh(win_map);
+	UpdateWindows();
+
+	/*wrefresh(win_map);
 
 	wrefresh(win_extra);
 
-	wrefresh(win_chat);
+	wrefresh(win_chat);*/
 
 	int input = wgetch(win_input);
 

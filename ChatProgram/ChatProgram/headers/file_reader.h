@@ -35,7 +35,7 @@ std::vector<std::vector<char>> LoadMap(std::string filename)
 	{
 		exit(1);
 	}
-	for (int y = 0; y < 50; y++)
+	for (int y = 0; y < MAP_SIZE_Y; y++)
 	{
 		//std::u32string
 		//char c = file.get();
@@ -50,7 +50,7 @@ std::vector<std::vector<char>> LoadMap(std::string filename)
 		}
 
 		map.push_back(std::vector<char>());
-		for (int x = 0; x < 128; x++)
+		for (int x = 0; x < MAP_SIZE_X; x++)
 		{
 			/*switch (str[x])
 			{

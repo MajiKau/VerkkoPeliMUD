@@ -1,8 +1,10 @@
 #pragma once
 #include <enet/enet.h>
 
+#include "game_structs.h"
 #include "curses_windows.h"
 #include "messages.h"
+
 
 ENetPeer * ConnectToHost(ENetHost* client)
 {
@@ -65,7 +67,7 @@ ENetHost * CreateClient()
 	//enet_host_destroy(client);
 }
 
-void InputWindowThread(ENetPeer * peer, bool* running) //Not thread safe, do not use
+/*void InputWindowThread(ENetPeer * peer, bool* running) //Not thread safe, do not use
 {
 	char name[20];
 	echo();
@@ -138,74 +140,160 @@ void InputWindowThread(ENetPeer * peer, bool* running) //Not thread safe, do not
 			break;
 		}
 	}
-}
+}*/
+bool typing = false;
+char* buffer;
+int index;
 
 void HandleInput(ENetPeer * peer, std::string name)
 {
-	char * msg;
-	std::string str;
-
-	char input = wgetch(win_input);
-	switch (input)
+	if (!typing)
 	{
-	case KEY_RESIZE:
-		resize_term(0, 0);
-		UpdateWindowSizes();
-		break;
+		char * msg;
+		std::string str;
 
-	case 'w':
-		SendMessageToPeer(peer, &MovementP(name, input));
-		break;
-	case 'a':
-		SendMessageToPeer(peer, &MovementP(name, input));
-		break;
-	case 's':
-		SendMessageToPeer(peer, &MovementP(name, input));
-		break;
-	case 'd':
-		SendMessageToPeer(peer, &MovementP(name, input));
-		break;
-	case 'l':
-		SendMessageToPeer(peer, &MovementP(name, input));
-		break;
-	case 't':
-
-		msg = new char[1000];
-
-		flushinp();
-		wprintw(win_input, "MSG:");
-		echo();
-
-		wgetstr(win_input, msg);
-		noecho();
-		wprintw(win_chat, "%s: %s\n", name.c_str(), msg);
-
-		str = std::string(msg);
-		if (msg[0] == '/')
+		char input = wgetch(win_input);
+		switch (input)
 		{
-			if (str == "/quit")
+		case KEY_RESIZE:
+			resize_term(0, 0);
+			UpdateWindowSizes();
+			break;
+
+		case 'w':
+			SendMessageToPeer(peer, &MovementP(name, NORTH));
+			break;
+
+		case 'a':
+			SendMessageToPeer(peer, &MovementP(name, WEST));
+			break;
+
+		case 's':
+			SendMessageToPeer(peer, &MovementP(name, SOUTH));
+			break;
+
+		case 'd':
+			SendMessageToPeer(peer, &MovementP(name, EAST));
+			break;
+
+		case 'l':
+			nodelay(win_input, false);
+			input = wgetch(win_input);
+			nodelay(win_input, true);
+			switch (input)
 			{
-				//running = false;
-				exit(0);
+			case 'w':
+				SendMessageToPeer(peer, &LookP(name, NORTH));
+				break;
+
+			case 'a':
+				SendMessageToPeer(peer, &LookP(name, WEST));
+				break;
+
+			case 's':
+				SendMessageToPeer(peer, &LookP(name, SOUTH));
+				break;
+
+			case 'd':
+				SendMessageToPeer(peer, &LookP(name, EAST));
+				break;
+
+			case 'l':
+				SendMessageToPeer(peer, &LookP(name, BELOW));
 				break;
 			}
-			if (str == "/stop")
+			break;
+
+		case 't':
+			typing = true;
+
+			buffer = new char[1000];
+			index = 0;
+			wprintw(win_input, "MSG:");
+
+			/*msg = new char[1000];
+
+
+			flushinp();
+			wprintw(win_input, "MSG:");
+			echo();
+
+			wgetstr(win_input, msg);
+			noecho();
+			wprintw(win_chat, "%s: %s\n", name.c_str(), msg);
+
+			str = std::string(msg);
+			if (msg[0] == '/')
+			{
+				if (str == "/quit")
+				{
+					//running = false;
+					exit(0);
+					break;
+				}
+				if (str == "/stop")
+				{
+					SendMessageToPeer(peer, &MessageP(name, msg));
+				}
+			}
+			else if(str != "")
 			{
 				SendMessageToPeer(peer, &MessageP(name, msg));
-			}
+			}*/
+			break;
+
+		default:
+			break;
+
 		}
-		else if(str != "")
+	}
+	else
+	{
+		char input = wgetch(win_input);
+		switch (input)
 		{
-			SendMessageToPeer(peer, &MessageP(name, msg));
+		case 10:
+			buffer[index] = '\0';
+			index++;
+			SendMessageToPeer(peer, &MessageP(name, buffer));
+			typing = false;
+			wprintw(win_input, "\n");
+			break;
+
+		case 8:
+			if (index > 0)
+			{
+				wprintw(win_input, "%c", input);
+				wdelch(win_input);
+				index--;
+				buffer[index] = '\0';
+			}
+			break;
+
+		default:
+			if (input != -1)
+			{
+				wprintw(win_input, "%c", input);
+				buffer[index] = input;
+				index++;
+				buffer[index] = '\0';
+			}
+			break;
 		}
-		break;
-	default:
-		break;
 	}
 }
 
 void ClientThread(int id, ENetHost* client, ENetPeer* peer, bool* running)
 {
+
+	Packet* pack;
+	MessagePacket* msg_pack;
+	LookPacket* look_pack;
+	MovePacket* move_pack;
+	JoinPacket* join_pack;
+	MapPacket* map_pack;
+	PlayersPacket* players_pack;
+
 	ENetEvent event;
 	nodelay(win_input, true);
 	wprintw(win_input, "Username:");
@@ -221,10 +309,13 @@ void ClientThread(int id, ENetHost* client, ENetPeer* peer, bool* running)
 	{
 		HandleInput(peer, name);
 		//wprintw(win_system, "-W-");
+		PrintMap(tile_map);
+		PrintPlayers(players);
+
 		UpdateWindows();
 
 		int enet_int = enet_host_service(client, &event, 0);
-		MessagePacket pack;
+		//MessagePacket msg_pack;
 		/* Wait up to 0 milliseconds for an event. */
 		if (enet_int > 0)
 		{
@@ -234,18 +325,44 @@ void ClientThread(int id, ENetHost* client, ENetPeer* peer, bool* running)
 				wprintw(win_system, "Someone is trying to connect to a client?");
 				break;
 			case ENET_EVENT_TYPE_RECEIVE:
-
-				pack = *(MessagePacket*)event.packet->data;
-
-				wprintw(win_chat, "%s: %s\n", pack.sender, pack.message);
-
-				if (pack.message == "/stop")
+				switch (((Packet*)(event.packet->data))->type)
 				{
-					wprintw(win_system, "Server shutdown");
+				case CHAT:
+					msg_pack = (MessagePacket*)event.packet->data;
+
+					wprintw(win_chat, "%s: %s\n", msg_pack->sender, msg_pack->message);
+
+					if (msg_pack->message == "/stop")
+					{
+						wprintw(win_system, "Server shutdown");
+					}
+
+					break;
+
+				case MAP:
+					map_pack = (MapPacket*)event.packet->data;
+					for (int x = 0; x < MAP_SIZE_X; x++)
+					{
+						for (int y = 0; y < MAP_SIZE_Y; y++)
+						{
+							tile_map[x][y] = map_pack->map[x][y];
+						}
+					}
+					break;
+
+				case PLAYERS:
+					players_pack = (PlayersPacket*)event.packet->data;
+					for (int i = 0; i < MAX_PLAYERS; i++)
+					{
+						players[i] = players_pack->players[i];
+					}
+					break;
+
+				default:
+					break;
+
 				}
 
-				/* Clean up the packet now that we're done using it. */
-				enet_packet_destroy(event.packet);
 
 				break;
 
@@ -254,6 +371,9 @@ void ClientThread(int id, ENetHost* client, ENetPeer* peer, bool* running)
 				running = false;
 				break;
 			}
+
+			/* Clean up the packet now that we're done using it. */
+			enet_packet_destroy(event.packet);
 		}
 		//Sleep(10);
 	}

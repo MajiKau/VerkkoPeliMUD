@@ -5,12 +5,11 @@
 #include "game_structs.h"
 #include "file_reader.h"
 
-char map[128][128];
 
-Tile tile_map[128][128];
+//char map[MAP_SIZE_X][MAP_SIZE_Y];
 
 
-std::vector<Player> players;
+
 
 void CreateMap()
 {
@@ -18,23 +17,21 @@ void CreateMap()
 
 	std::vector<std::vector<char>> map_v = LoadMap("../Content/map.json");
 
-	for (int y = 0; y < 128; y++)
+	for (int y = 0; y < MAP_SIZE_Y; y++)
 	{
 		if (map_v.size() <= y)
 		{
 			break;
 		}
-		for (int x = 0; x < 128; x++)
+		for (int x = 0; x < MAP_SIZE_X; x++)
 		{
 			if (map_v[y].size() <= x)
 			{
-				map[x][y] = '\n';
+			//	map[x][y] = '\n';
 				break;
 			}
-			//char c = ':' + rand() % 4;
-			//char c = 176 + rand() % 3;
-			//map[x][y] = c;
-			map[x][y] = map_v[y][x];
+
+			//map[x][y] = map_v[y][x];
 
 			switch (map_v[y][x])
 			{
@@ -69,7 +66,7 @@ std::string HandleMovement(MovePacket* packet)
 	Player* player = NULL;
 	std::string pa_name(packet->sender);
 	std::string message = "";
-	for (int i = 0; i < players.size(); i++)
+	for (int i = 0; i < MAX_PLAYERS; i++)
 	{
 		std::string pl_name(players[i].name);
 		if (pl_name == pa_name)
@@ -81,25 +78,26 @@ std::string HandleMovement(MovePacket* packet)
 	{
 		return "";
 	}
-	switch (packet->message)
-	{
-	case 'w':
+
+	switch (packet->dir)
+	{	
+	case NORTH:
 		if(tile_map[player->x][player->y-1].walkable)
 		player->y -= 1;
 		break;
-	case 'a':
+	case WEST:
 		if (tile_map[player->x-1][player->y].walkable)
 		player->x -= 1;
 		break;
-	case 's':
+	case SOUTH:
 		if (tile_map[player->x][player->y + 1].walkable)
 		player->y += 1;
 		break;
-	case 'd':
+	case EAST:
 		if (tile_map[player->x+1][player->y].walkable)
 		player->x += 1;
 		break;
-	case 'l':
+	/*case 'l':
 		switch (tile_map[player->x][player->y].type)
 		{
 		case GRASS:
@@ -109,9 +107,9 @@ std::string HandleMovement(MovePacket* packet)
 			message = "Sand.";
 			break;
 		default:
-			message = "You know what that is.";
+			message = "You don't know what that is.";
 			break;
-		}
+		}*/
 		
 		break;
 	default:
@@ -119,6 +117,84 @@ std::string HandleMovement(MovePacket* packet)
 	}
 	return message;
 }
+
+std::string HandleLook(LookPacket* packet)
+{
+	Player* player = NULL;
+	std::string pa_name(packet->sender);
+	std::string message = "";
+	for (int i = 0; i < MAX_PLAYERS; i++)
+	{
+		std::string pl_name(players[i].name);
+		if (pl_name == pa_name)
+		{
+			player = &players[i];
+		}
+	}
+	if (player == NULL)
+	{
+		return "";
+	}
+
+	tiletype tile = GROUND;
+
+	switch (packet->dir)
+	{
+	case NORTH:
+		tile = tile_map[player->x][player->y - 1].type;			
+		break;
+
+	case WEST:
+		tile = tile_map[player->x - 1][player->y].type;
+		break;
+
+	case SOUTH:
+		tile = tile_map[player->x][player->y + 1].type;
+		break;
+
+	case EAST:
+		tile = tile_map[player->x + 1][player->y].type;
+		break;
+
+	case BELOW:
+		tile = tile_map[player->x][player->y].type;
+		break;
+
+	default:
+		break;
+	}
+
+	switch (tile)
+	{
+	case GRASS:
+		message = "Green grass.";
+		break;
+
+	case SAND:
+		message = "Sand.";
+		break;
+
+	case WALL:
+		message = "Wall.";
+		break;
+
+	case WATER:
+		message = "Water.";
+		break;
+
+	case GROUND:
+		message = "Ground.";
+		break;
+
+	default:
+		message = "You don't know what that is.";
+		break;
+
+	}
+
+	return message;
+}
+
 ENetHost * CreateServer()
 {
 	ENetAddress address;
@@ -196,9 +272,11 @@ void ServerThread(int id, ENetHost* server, bool* running)
 
 	Packet* pack;
 	MessagePacket* msg_pack;
+	LookPacket* look_pack;
 	MovePacket* move_pack;
 	JoinPacket* join_pack;
-
+	MapPacket* map_pack;
+	PlayersPacket* players_pack;
 
 	char c1 = 176;
 
@@ -219,6 +297,14 @@ void ServerThread(int id, ENetHost* server, bool* running)
 		PrintMap(tile_map);
 		PrintPlayers(players);
 		UpdateWindows();
+
+		for each (auto peer in connected_peers)
+		{
+			//map_pack = &MapP("", tile_map);
+			//SendMessageToPeer(peer, map_pack);
+			players_pack = &PlayersP("", players);
+			SendMessageToPeer(peer, players_pack);
+		}
 
 		int enet_int = enet_host_service(server, &event, 0);
 		std::string name = "Client:" + std::to_string(num_of_connected_clients);
@@ -241,7 +327,7 @@ void ServerThread(int id, ENetHost* server, bool* running)
 
 				switch (((Packet*)(event.packet->data))->type)
 				{
-				case chat:
+				case CHAT:
 					msg_pack = (MessagePacket*)event.packet->data;
 
 					for each (auto peer in connected_peers)
@@ -259,30 +345,48 @@ void ServerThread(int id, ENetHost* server, bool* running)
 
 					wprintw(win_system, "[%s]", msg_pack->message);
 					break;
-				case movement:
+
+				case MOVEMENT:
 					move_pack = (MovePacket*)event.packet->data;
 					message = HandleMovement(move_pack);
 					if (message != "")
 					{
-						SendMessageToPeer(event.peer, &MessageP("",message));
+						SendMessageToPeer(event.peer, &MessageP("[Movement]",message));
 
 					}
-					wprintw(win_system, "[%c]", move_pack->message);
+					wprintw(win_system, "[%d]", move_pack->dir);
 					break;
-				case command:
-					break;
-				case join:
-					join_pack = (JoinPacket*)event.packet->data;
-					players.push_back(Player(join_pack->sender, rand() % 10, rand() % 10));
 
+				case LOOK:
+					look_pack = (LookPacket*)event.packet->data;
+					message = HandleLook(look_pack);
+					if (message != "")
+					{
+						SendMessageToPeer(event.peer, &MessageP("[Look]", message));
+					}
+					wprintw(win_system, "[%d]", look_pack->dir);
 					break;
+
+				case COMMAND:
+					break;
+
+				case JOIN:
+					join_pack = (JoinPacket*)event.packet->data;
+					players[num_of_players] = (Player(join_pack->sender, rand() % 10, rand() % 10));
+					num_of_players++;
+
+					map_pack = &MapP("", tile_map);
+					SendMessageToPeer(event.peer, map_pack);
+					break;
+
 				default:
 					break;
+
 				}
 
 				pack = (Packet*)event.packet->data;
 
-				wprintw(win_system, "A packet of length %u was received from %s on channel %u.",
+				wprintw(win_system, "A packet of length %u was received from %s on channel %u.\n",
 					(unsigned int)event.packet->dataLength,
 					pack->sender,
 					event.channelID);
@@ -295,6 +399,8 @@ void ServerThread(int id, ENetHost* server, bool* running)
 			case ENET_EVENT_TYPE_DISCONNECT:
 				wprintw(win_system, "%s disconnected.", (char*)event.peer->data);
 				/* Reset the peer's client information. */
+
+
 				event.peer->data = NULL;
 				connected_peers.erase(event.peer);
 			}

@@ -41,11 +41,11 @@ int my_print(WINDOW * win, const char * str, ...)
 	return ret;
 }
 
-void PrintMap(Tile map[128][128])
+void PrintMap(Tile map[MAP_SIZE_X][MAP_SIZE_Y])
 {
-	for (int x = 0; x < 128; x++)
+	for (int x = 0; x < MAP_SIZE_X; x++)
 	{
-		for (int y = 0; y < 128; y++)
+		for (int y = 0; y < MAP_SIZE_Y; y++)
 		{
 			switch (map[x][y].type)
 			{
@@ -84,13 +84,13 @@ void PrintMap(Tile map[128][128])
 	}
 }
 
-void PrintMap(char map[128][128])
+void PrintMap(char map[MAP_SIZE_X][MAP_SIZE_Y])
 {
 	//wattron(win_map, COLOR_PAIR(TERM_COLOR_PLAYER));
 	wattron(win_map, COLOR_PAIR(TERM_COLOR_SAND));
-	for (int x = 0; x < 128; x++)
+	for (int x = 0; x < MAP_SIZE_X; x++)
 	{
-		for (int y = 0; y < 128; y++)
+		for (int y = 0; y < MAP_SIZE_Y; y++)
 		{
 			switch (map[x][y])
 			{
@@ -254,15 +254,15 @@ void UpdateWindowSizes()
 	wprintw(win_system, "Terminal Y:%i, X:%i\n", LINES, COLS);
 }
 
-void PrintPlayers(std::vector<Player> players)
+void PrintPlayers(Player players[MAX_PLAYERS])
 {
 	wattron(win_map, COLOR_PAIR(TERM_COLOR_PLAYER));
-	wattron(win_map, A_BLINK);
+	//wattron(win_map, A_BLINK);
 	for each (auto player in players)
 	{
 		mvwaddch(win_map, player.y , player.x, '@');
 	}
-	wattroff(win_map, A_BLINK);
+	//wattroff(win_map, A_BLINK);
 	wattroff(win_map, COLOR_PAIR(TERM_COLOR_PLAYER));
 }
 

@@ -1,16 +1,29 @@
 #pragma once
 
-enum message_type
+enum MessageType
 {
-	movement,
-	chat,
-	command,
-	join
+	MOVEMENT,
+	LOOK,
+	CHAT,
+	COMMAND,
+	JOIN,
+	MAP,
+	PLAYERS
+};
+
+enum Direction
+{
+	NORTH,
+	EAST,
+	WEST,
+	SOUTH,
+	BELOW,
+	ABOVE
 };
 
 struct Packet
 {
-	message_type type;
+	MessageType type;
 	char sender[20];
 };
 
@@ -21,7 +34,12 @@ struct MessagePacket :Packet
 
 struct MovePacket :Packet
 {
-	char message;
+	Direction dir;
+};
+
+struct LookPacket :Packet
+{
+	Direction dir;
 };
 
 struct JoinPacket :Packet
@@ -32,6 +50,17 @@ struct CommandPacket :Packet
 {
 	char message[100];
 };
+
+struct MapPacket :Packet
+{
+	Tile map[MAP_SIZE_X][MAP_SIZE_Y];
+};
+
+struct PlayersPacket :Packet
+{
+	Player players[MAX_PLAYERS];
+};
+
 JoinPacket JoinP(std::string name)
 {
 	if (name.size() > 19)
@@ -39,12 +68,13 @@ JoinPacket JoinP(std::string name)
 		name.resize(19);
 	}
 	JoinPacket pack;
-	pack.type = join;
+	pack.type = JOIN;
 
 	memcpy(pack.sender, name.c_str(), 20);
 	return pack;
 }
-MovePacket MovementP(std::string name, char message)
+
+MovePacket MovementP(std::string name, Direction direction)
 {
 
 	if (name.size() > 19)
@@ -52,12 +82,28 @@ MovePacket MovementP(std::string name, char message)
 		name.resize(19);
 	}
 	MovePacket pack;
-	pack.type = movement;
+	pack.type = MOVEMENT;
 
 	memcpy(pack.sender, name.c_str(), 20);
-	pack.message = message;
+	pack.dir = direction;
 	return pack;
 }
+
+LookPacket LookP(std::string name, Direction direction)
+{
+
+	if (name.size() > 19)
+	{
+		name.resize(19);
+	}
+	LookPacket pack;
+	pack.type = LOOK;
+
+	memcpy(pack.sender, name.c_str(), 20);
+	pack.dir = direction;
+	return pack;
+}
+
 MessagePacket MessageP(std::string name, std::string message)
 {
 	if (message.size() > 1003)
@@ -67,15 +113,55 @@ MessagePacket MessageP(std::string name, std::string message)
 		name.resize(19);
 	}
 	MessagePacket pack;
-	pack.type = chat;
+	pack.type = CHAT;
 	
 	memcpy(pack.sender, name.c_str(), 20);
 	memcpy(pack.message, message.c_str(), 1004);
 	return pack;
 }
+
+MapPacket MapP(std::string name, Tile map[MAP_SIZE_X][MAP_SIZE_Y] )
+{
+	if (name.size() > 19)
+	{
+		name.resize(19);
+	}
+	MapPacket pack;
+	pack.type = MAP;
+
+	memcpy(pack.sender, name.c_str(), 20);
+	for (int x = 0; x < MAP_SIZE_X; x++)
+	{
+		for (int y = 0; y < MAP_SIZE_Y; y++)
+		{
+			pack.map[x][y] = map[x][y];
+		}
+	}
+	//pack.map = map;
+	return pack;
+}
+
+PlayersPacket PlayersP(std::string name, Player players[MAX_PLAYERS])
+{
+	if (name.size() > 19)
+	{
+		name.resize(19);
+	}
+	PlayersPacket pack;
+	pack.type = PLAYERS;
+
+	memcpy(pack.sender, name.c_str(), 20);
+	for (int i = 0; i < MAX_PLAYERS; i++)
+	{
+		pack.players[i] = players[i];
+	}
+	//pack.map = map;
+	return pack;
+}
+
 void SendMessageToPeer(ENetPeer* peer, Packet* package)
 {
-	if (package->type == chat)
+	if (package->type == CHAT)
 	{
 		char* message[sizeof(MessagePacket)];
 		memcpy(message, package, sizeof(MessagePacket));
@@ -85,7 +171,7 @@ void SendMessageToPeer(ENetPeer* peer, Packet* package)
 			ENET_PACKET_FLAG_RELIABLE);
 		enet_peer_send(peer, 0, packet);
 	}
-	else if (package->type == movement)
+	else if (package->type == MOVEMENT)
 	{
 		char* message[sizeof(MovePacket)];
 		memcpy(message, package, sizeof(MovePacket));
@@ -95,7 +181,17 @@ void SendMessageToPeer(ENetPeer* peer, Packet* package)
 			ENET_PACKET_FLAG_RELIABLE);
 		enet_peer_send(peer, 0, packet);
 	}
-	else if (package->type == join)
+	else if (package->type == LOOK)
+	{
+		char* message[sizeof(LookPacket)];
+		memcpy(message, package, sizeof(LookPacket));
+
+		ENetPacket * packet = enet_packet_create(message,
+			sizeof(message),
+			ENET_PACKET_FLAG_RELIABLE);
+		enet_peer_send(peer, 0, packet);
+	}
+	else if (package->type == JOIN)
 	{
 		char* message[sizeof(JoinPacket)];
 		memcpy(message, package, sizeof(JoinPacket));
@@ -105,12 +201,31 @@ void SendMessageToPeer(ENetPeer* peer, Packet* package)
 			ENET_PACKET_FLAG_RELIABLE);
 		enet_peer_send(peer, 0, packet);
 	}
+	else if (package->type == MAP)
+	{
+		char* message[sizeof(MapPacket)];
+		memcpy(message, package, sizeof(MapPacket));
 
+		ENetPacket * packet = enet_packet_create(message,
+			sizeof(message),
+			ENET_PACKET_FLAG_RELIABLE);
+		enet_peer_send(peer, 0, packet);
+	}
+	else if (package->type == PLAYERS)
+	{
+		char* message[sizeof(PlayersPacket)];
+		memcpy(message, package, sizeof(PlayersPacket));
+
+		ENetPacket * packet = enet_packet_create(message,
+			sizeof(message),
+			ENET_PACKET_FLAG_RELIABLE);
+		enet_peer_send(peer, 0, packet);
+	}
 }
 
 
-void _SendPackageToPeer(ENetPeer* peer, std::string message = "Test Package")
-{
+//void _SendPackageToPeer(ENetPeer* peer, std::string message = "Test Package")
+//{
 	/* Create a reliable packet of size 7 containing "packet\0" */
 	//ENetPacket * packet = enet_packet_create("packet",
 	//	strlen("packet") + 1,
@@ -123,10 +238,10 @@ void _SendPackageToPeer(ENetPeer* peer, std::string message = "Test Package")
 	/* One could also broadcast the packet by         */
 	/* enet_host_broadcast (host, 0, packet);         */
 
-	ENetPacket * packet = enet_packet_create(message.c_str(),
-		sizeof(message),
-		ENET_PACKET_FLAG_RELIABLE);
-	enet_peer_send(peer, 0, packet);
+	///ENetPacket * packet = enet_packet_create(message.c_str(),
+	///	sizeof(message),
+	///	ENET_PACKET_FLAG_RELIABLE);
+	///enet_peer_send(peer, 0, packet);
 
 
 	//DO THINGS HERE
@@ -134,4 +249,4 @@ void _SendPackageToPeer(ENetPeer* peer, std::string message = "Test Package")
 
 	/* One could just use enet_host_service() instead. */
 	//enet_host_flush(host);
-}
+//}
