@@ -1,7 +1,7 @@
 #pragma once
 
-#define MAP_SIZE_X 90
-#define MAP_SIZE_Y 42
+#define MAP_SIZE_X 301
+#define MAP_SIZE_Y 80
 
 #define MAX_PLAYERS 20
 
@@ -47,15 +47,11 @@ struct Tile
 	}
 }; 
 
-/*struct Map
-{
-};*/
 
-Tile tile_map[MAP_SIZE_X][MAP_SIZE_Y];
+std::vector<std::vector<Tile>> tile_map(MAP_SIZE_X, std::vector<Tile>(MAP_SIZE_Y, Tile()));
+//Tile tile_map[MAP_SIZE_X][MAP_SIZE_Y];
+//Tile** tile_map;
+//Tile* tile_map;
 
 int num_of_players = 0;
 Player players[MAX_PLAYERS];
-
-//Map map;
-
-//Tile tile_map[MAP_SIZE_X][MAP_SIZE_Y];

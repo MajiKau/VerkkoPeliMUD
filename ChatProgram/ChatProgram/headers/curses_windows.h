@@ -24,6 +24,8 @@ std::vector<WINDOW*> window_borders;
 #define TERM_COLOR_SAND 5
 #define TERM_COLOR_WATER 6
 
+#define MAP_WIN_SIZE_X 93
+#define MAP_WIN_SIZE_Y 54
 
 int my_print(WINDOW * win, const char * str, ...)
 {
@@ -41,12 +43,156 @@ int my_print(WINDOW * win, const char * str, ...)
 	return ret;
 }
 
-void PrintMap(Tile map[MAP_SIZE_X][MAP_SIZE_Y])
+void PrintMap(std::vector<std::vector<Tile>> &map, int offset_x, int offset_y)
 {
-	for (int x = 0; x < MAP_SIZE_X; x++)
+	for (int x = 0; x < MAP_WIN_SIZE_X && x < MAP_SIZE_X; x++)
 	{
-		for (int y = 0; y < MAP_SIZE_Y; y++)
+		if (x >= MAP_SIZE_X) break;
+
+		for (int y = 0; y < MAP_WIN_SIZE_Y && y < MAP_SIZE_Y; y++)
 		{
+			if (y >= MAP_SIZE_Y) break;
+
+			switch (map[x + offset_x][y + offset_y].type)
+			{
+			case GROUND:
+				wattron(win_map, COLOR_PAIR(TERM_COLOR_GRASS));
+				mvwaddch(win_map, y, x, 177);
+				wattroff(win_map, COLOR_PAIR(TERM_COLOR_GRASS));
+				break;
+			case GRASS:
+				wattron(win_map, COLOR_PAIR(TERM_COLOR_GRASS));
+				mvwaddch(win_map, y, x, 176);
+				wattroff(win_map, COLOR_PAIR(TERM_COLOR_GRASS));
+				break;
+			case SAND:
+				wattron(win_map, COLOR_PAIR(TERM_COLOR_SAND));
+				mvwaddch(win_map, y, x, 176);
+				wattroff(win_map, COLOR_PAIR(TERM_COLOR_SAND));
+				break;
+			case WATER:
+				wattron(win_map, COLOR_PAIR(TERM_COLOR_WATER));
+				mvwaddch(win_map, y, x, 176);
+				wattroff(win_map, COLOR_PAIR(TERM_COLOR_WATER));
+				break;
+			case WALL:
+				wattron(win_map, COLOR_PAIR(TERM_COLOR_WALL));
+				mvwaddch(win_map, y, x, 177);
+				wattroff(win_map, COLOR_PAIR(TERM_COLOR_WALL));
+				break;
+			default:
+				wattron(win_map, COLOR_PAIR(TERM_COLOR_PLAYER));
+				mvwaddch(win_map, y, x, 'O');
+				wattroff(win_map, COLOR_PAIR(TERM_COLOR_PLAYER));
+				break;
+			}
+		}
+	}
+}
+
+/*void PrintMap(Tile** map, int offset_x, int offset_y)
+{
+	for (int x = 0; x < MAP_WIN_SIZE_X && x < MAP_SIZE_X; x++)
+	{
+		if (x >= MAP_SIZE_X) break;
+
+		for (int y = 0; y < MAP_WIN_SIZE_Y && y < MAP_SIZE_Y; y++)
+		{
+			if (y >= MAP_SIZE_Y) break;
+
+			switch (map[x + offset_x][y + offset_y].type)
+			{
+			case GROUND:
+				wattron(win_map, COLOR_PAIR(TERM_COLOR_GRASS));
+				mvwaddch(win_map, y, x, 177);
+				wattroff(win_map, COLOR_PAIR(TERM_COLOR_GRASS));
+				break;
+			case GRASS:
+				wattron(win_map, COLOR_PAIR(TERM_COLOR_GRASS));
+				mvwaddch(win_map, y, x, 176);
+				wattroff(win_map, COLOR_PAIR(TERM_COLOR_GRASS));
+				break;
+			case SAND:
+				wattron(win_map, COLOR_PAIR(TERM_COLOR_SAND));
+				mvwaddch(win_map, y, x, 176);
+				wattroff(win_map, COLOR_PAIR(TERM_COLOR_SAND));
+				break;
+			case WATER:
+				wattron(win_map, COLOR_PAIR(TERM_COLOR_WATER));
+				mvwaddch(win_map, y, x, 176);
+				wattroff(win_map, COLOR_PAIR(TERM_COLOR_WATER));
+				break;
+			case WALL:
+				wattron(win_map, COLOR_PAIR(TERM_COLOR_WALL));
+				mvwaddch(win_map, y, x, 177);
+				wattroff(win_map, COLOR_PAIR(TERM_COLOR_WALL));
+				break;
+			default:
+				wattron(win_map, COLOR_PAIR(TERM_COLOR_PLAYER));
+				mvwaddch(win_map, y, x, 'O');
+				wattroff(win_map, COLOR_PAIR(TERM_COLOR_PLAYER));
+				break;
+			}
+		}
+	}
+}*/
+
+/*void PrintMap(Tile map[MAP_SIZE_X][MAP_SIZE_Y], int offset_x, int offset_y)
+{
+	for (int x = 0; x < MAP_WIN_SIZE_X; x++)
+	{
+		if (x >= MAP_SIZE_X) break;
+
+		for (int y = 0; y < MAP_WIN_SIZE_Y; y++)
+		{
+			if (y >= MAP_SIZE_Y) break;
+
+			switch (map[x + offset_x][y + offset_y].type)
+			{
+			case GROUND:
+				wattron(win_map, COLOR_PAIR(TERM_COLOR_GRASS));
+				mvwaddch(win_map, y, x, 177);
+				wattroff(win_map, COLOR_PAIR(TERM_COLOR_GRASS));
+				break;
+			case GRASS:
+				wattron(win_map, COLOR_PAIR(TERM_COLOR_GRASS));
+				mvwaddch(win_map, y, x, 176);
+				wattroff(win_map, COLOR_PAIR(TERM_COLOR_GRASS));
+				break;
+			case SAND:
+				wattron(win_map, COLOR_PAIR(TERM_COLOR_SAND));
+				mvwaddch(win_map, y, x, 176);
+				wattroff(win_map, COLOR_PAIR(TERM_COLOR_SAND));
+				break;
+			case WATER:
+				wattron(win_map, COLOR_PAIR(TERM_COLOR_WATER));
+				mvwaddch(win_map, y, x, 176);
+				wattroff(win_map, COLOR_PAIR(TERM_COLOR_WATER));
+				break;
+			case WALL:
+				wattron(win_map, COLOR_PAIR(TERM_COLOR_WALL));
+				mvwaddch(win_map, y, x, 177);
+				wattroff(win_map, COLOR_PAIR(TERM_COLOR_WALL));
+				break;
+			default:
+				wattron(win_map, COLOR_PAIR(TERM_COLOR_PLAYER));
+				mvwaddch(win_map, y, x, 'O');
+				wattroff(win_map, COLOR_PAIR(TERM_COLOR_PLAYER));
+				break;
+			}
+		}
+	}
+}*/
+
+void PrintMap(std::vector<std::vector<Tile>> &map)
+{
+	for (int x = 0; x < MAP_WIN_SIZE_X && x < MAP_SIZE_X; x++)
+	{
+		if (x > MAP_SIZE_X) break;
+
+		for (int y = 0; y < MAP_WIN_SIZE_Y && y < MAP_SIZE_Y; y++)
+		{
+			if (y > MAP_SIZE_Y) break;
 			switch (map[x][y].type)
 			{
 			case GROUND:
@@ -84,10 +230,101 @@ void PrintMap(Tile map[MAP_SIZE_X][MAP_SIZE_Y])
 	}
 }
 
-void PrintMap(char map[MAP_SIZE_X][MAP_SIZE_Y])
+/*void PrintMap(Tile** map)
 {
-	//wattron(win_map, COLOR_PAIR(TERM_COLOR_PLAYER));
-	wattron(win_map, COLOR_PAIR(TERM_COLOR_SAND));
+	for (int x = 0; x < MAP_WIN_SIZE_X; x++)
+	{
+		if (x > MAP_SIZE_X) break;
+
+		for (int y = 0; y < MAP_WIN_SIZE_Y; y++)
+		{
+			if (y > MAP_SIZE_Y) break;
+			switch (map[x][y].type)
+			{
+			case GROUND:
+				wattron(win_map, COLOR_PAIR(TERM_COLOR_GRASS));
+				mvwaddch(win_map, y, x, 177);
+				wattroff(win_map, COLOR_PAIR(TERM_COLOR_GRASS));
+				break;
+			case GRASS:
+				wattron(win_map, COLOR_PAIR(TERM_COLOR_GRASS));
+				mvwaddch(win_map, y, x, 176);
+				wattroff(win_map, COLOR_PAIR(TERM_COLOR_GRASS));
+				break;
+			case SAND:
+				wattron(win_map, COLOR_PAIR(TERM_COLOR_SAND));
+				mvwaddch(win_map, y, x, 176);
+				wattroff(win_map, COLOR_PAIR(TERM_COLOR_SAND));
+				break;
+			case WATER:
+				wattron(win_map, COLOR_PAIR(TERM_COLOR_WATER));
+				mvwaddch(win_map, y, x, 176);
+				wattroff(win_map, COLOR_PAIR(TERM_COLOR_WATER));
+				break;
+			case WALL:
+				wattron(win_map, COLOR_PAIR(TERM_COLOR_WALL));
+				mvwaddch(win_map, y, x, 177);
+				wattroff(win_map, COLOR_PAIR(TERM_COLOR_WALL));
+				break;
+			default:
+				wattron(win_map, COLOR_PAIR(TERM_COLOR_PLAYER));
+				mvwaddch(win_map, y, x, 'O');
+				wattroff(win_map, COLOR_PAIR(TERM_COLOR_PLAYER));
+				break;
+			}
+		}
+	}
+}*/
+
+/*void PrintMap(Tile map[MAP_SIZE_X][MAP_SIZE_Y])
+{
+	for (int x = 0; x < MAP_WIN_SIZE_X; x++)
+	{
+		if (x > MAP_SIZE_X) break;
+
+		for (int y = 0; y < MAP_WIN_SIZE_Y; y++)
+		{
+			if (y > MAP_SIZE_Y) break;
+			switch (map[x][y].type)
+			{
+			case GROUND:
+				wattron(win_map, COLOR_PAIR(TERM_COLOR_GRASS));
+				mvwaddch(win_map, y, x, 177);
+				wattroff(win_map, COLOR_PAIR(TERM_COLOR_GRASS));
+				break;
+			case GRASS:
+				wattron(win_map, COLOR_PAIR(TERM_COLOR_GRASS));
+				mvwaddch(win_map, y, x, 176);
+				wattroff(win_map, COLOR_PAIR(TERM_COLOR_GRASS));
+				break;
+			case SAND:
+				wattron(win_map, COLOR_PAIR(TERM_COLOR_SAND));
+				mvwaddch(win_map, y, x, 176);
+				wattroff(win_map, COLOR_PAIR(TERM_COLOR_SAND));
+				break;
+			case WATER:
+				wattron(win_map, COLOR_PAIR(TERM_COLOR_WATER));
+				mvwaddch(win_map, y, x, 176);
+				wattroff(win_map, COLOR_PAIR(TERM_COLOR_WATER));
+				break;
+			case WALL:
+				wattron(win_map, COLOR_PAIR(TERM_COLOR_WALL));
+				mvwaddch(win_map, y, x, 177);
+				wattroff(win_map, COLOR_PAIR(TERM_COLOR_WALL));
+				break;
+			default:
+				wattron(win_map, COLOR_PAIR(TERM_COLOR_PLAYER));
+				mvwaddch(win_map, y, x, 'O');
+				wattroff(win_map, COLOR_PAIR(TERM_COLOR_PLAYER));
+				break;
+			}
+		}
+	}
+}*/
+
+
+/*void PrintMap(char map[MAP_SIZE_X][MAP_SIZE_Y])
+{
 	for (int x = 0; x < MAP_SIZE_X; x++)
 	{
 		for (int y = 0; y < MAP_SIZE_Y; y++)
@@ -125,15 +362,11 @@ void PrintMap(char map[MAP_SIZE_X][MAP_SIZE_Y])
 				wattroff(win_map, COLOR_PAIR(TERM_COLOR_PLAYER));
 				break;
 			}
-			/*wattroff(win_map, COLOR_PAIR(TERM_COLOR_PLAYER));
-			waddch(win_map, -80);
-			wattroff(win_map, COLOR_PAIR(TERM_COLOR_PLAYER));*/
-			//mvwaddch(win_map, y, x, -'#');
 		}
 	}
-	//attron(COLOR_PAIR(2));
-	//wattroff(win_map, COLOR_PAIR(TERM_COLOR_GRASS));
-}
+}*/
+
+
 /*static BOOL _fit_console_window(HANDLE con_out, CONST SMALL_RECT *rect)
 {
 	SMALL_RECT run;
@@ -222,27 +455,27 @@ void UpdateWindowSizes()
 	float in_h = 0.15f;
 	float ex_h = 1.0f - ch_h - in_h;
 
-	wresize(win_system,	st_h*h-2, left_w*w-2);
-	wresize(win_map,	ma_h*h-2, left_w*w-2);
-	wresize(win_chat,	ch_h*h-2, right_w*w-2);
-	wresize(win_input,	in_h*h-2, right_w*w-2);
-	wresize(win_extra,	ex_h*h-2, right_w*w-2);
-	wresize(window_borders[0], st_h*h, left_w*w);
-	wresize(window_borders[1], ma_h*h, left_w*w);
-	wresize(window_borders[2], ch_h*h, right_w*w);
-	wresize(window_borders[3], in_h*h, right_w*w);
-	wresize(window_borders[4], ex_h*h, right_w*w);
+	wresize(win_system,	(int)(st_h*h-2), (int)(left_w*w-2));
+	wresize(win_map,	(int)(ma_h*h-2), (int)(left_w*w-2));
+	wresize(win_chat,	(int)(ch_h*h-2), (int)(right_w*w-2));
+	wresize(win_input,	(int)(in_h*h-2), (int)(right_w*w-2));
+	wresize(win_extra,	(int)(ex_h*h-2), (int)(right_w*w-2));
+	wresize(window_borders[0], (int)(st_h*h), (int)(left_w*w));
+	wresize(window_borders[1], (int)(ma_h*h), (int)(left_w*w));
+	wresize(window_borders[2], (int)(ch_h*h), (int)(right_w*w));
+	wresize(window_borders[3], (int)(in_h*h), (int)(right_w*w));
+	wresize(window_borders[4], (int)(ex_h*h), (int)(right_w*w));
 
-	mvwin(win_system,	0+1,				0+1);
-	mvwin(win_map,		st_h*h+1,			0+1);
-	mvwin(win_chat,		0+1,				left_w*w+1);
-	mvwin(win_input,	ch_h*h+1,			left_w*w+1);
-	mvwin(win_extra,	(ch_h + in_h)*h+1,	left_w*w+1);
+	mvwin(win_system,	0+1,						0+1);
+	mvwin(win_map,		(int)(st_h*h+1),			0+1);
+	mvwin(win_chat,		0+1,						(int)(left_w*w+1));
+	mvwin(win_input,	(int)(ch_h*h+1),			(int)(left_w*w+1));
+	mvwin(win_extra,	(int)((ch_h + in_h)*h + 1), (int)(left_w*w + 1));
 	mvwin(window_borders[0], 0, 0);
-	mvwin(window_borders[1], st_h*h, 0);
-	mvwin(window_borders[2], 0, left_w*w);
-	mvwin(window_borders[3], ch_h*h, left_w*w);
-	mvwin(window_borders[4], (ch_h + in_h)*h, left_w*w);
+	mvwin(window_borders[1], (int)(st_h*h), 0);
+	mvwin(window_borders[2], 0, (int)(left_w*w));
+	mvwin(window_borders[3], (int)(ch_h*h), (int)(left_w*w));
+	mvwin(window_borders[4], (int)((ch_h + in_h)*h), (int)(left_w*w));
 
 	wborder(window_borders[0], 0, 0, 0, 0, 0, 0, 0, 0);
 	wborder(window_borders[1], 0, 0, 0, 0, 0, 0, 0, 0);
@@ -254,12 +487,24 @@ void UpdateWindowSizes()
 	wprintw(win_system, "Terminal Y:%i, X:%i\n", LINES, COLS);
 }
 
+void PrintPlayers(Player players[MAX_PLAYERS], int offset_x, int offset_y)
+{
+	wattron(win_map, COLOR_PAIR(TERM_COLOR_PLAYER));
+	for each (auto player in players)
+	{
+		if (player.x > -1 && player.y > -1 && player.x <= MAP_WIN_SIZE_X + offset_x && player.y <= MAP_WIN_SIZE_Y + offset_y)
+		mvwaddch(win_map, player.y - offset_y, player.x - offset_x, '@');
+	}
+	wattroff(win_map, COLOR_PAIR(TERM_COLOR_PLAYER));
+}
+
 void PrintPlayers(Player players[MAX_PLAYERS])
 {
 	wattron(win_map, COLOR_PAIR(TERM_COLOR_PLAYER));
 	//wattron(win_map, A_BLINK);
 	for each (auto player in players)
 	{
+		if(player.x > -1 && player.y > -1 && player.x <= MAP_WIN_SIZE_X && player.y <= MAP_WIN_SIZE_Y)
 		mvwaddch(win_map, player.y , player.x, '@');
 	}
 	//wattroff(win_map, A_BLINK);
@@ -338,15 +583,15 @@ void InitWindows()
 
 	getmaxyx(stdscr, h, w);
 
-	win_system = MakeWindowWithBorders(st_h*h, left_w*w, 0, 0);
+	win_system = MakeWindowWithBorders((int)(st_h*h), (int)(left_w*w), 0, 0);
 
-	win_map = MakeWindowWithBorders(ma_h*h, left_w*w, st_h*h, 0, false);
+	win_map = MakeWindowWithBorders((int)(ma_h*h), (int)(left_w*w), (int)(st_h*h), 0, false);
 
-	win_chat = MakeWindowWithBorders(ch_h*h, right_w*w, 0, left_w*w);
+	win_chat = MakeWindowWithBorders((int)(ch_h*h), (int)(right_w*w), 0, (int)(left_w*w));
 
-	win_input = MakeWindowWithBorders(in_h*h, right_w*w, ch_h*h, left_w*w);
+	win_input = MakeWindowWithBorders((int)(in_h*h), (int)(right_w*w), (int)(ch_h*h), (int)(left_w*w));
 
-	win_extra = MakeWindowWithBorders(ex_h*h, right_w*w, (ch_h + in_h)*h, left_w*w);
+	win_extra = MakeWindowWithBorders((int)(ex_h*h), (int)(right_w*w), (int)((ch_h + in_h)*h), (int)(left_w*w));
 
 	cbreak();
 	noecho();

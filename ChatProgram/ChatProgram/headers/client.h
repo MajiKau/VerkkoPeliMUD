@@ -149,7 +149,7 @@ void HandleInput(ENetPeer * peer, std::string name)
 {
 	if (!typing)
 	{
-		char * msg;
+		//char * msg;
 		std::string str;
 
 		char input = wgetch(win_input);
@@ -258,6 +258,7 @@ void HandleInput(ENetPeer * peer, std::string name)
 			SendMessageToPeer(peer, &MessageP(name, buffer));
 			typing = false;
 			wprintw(win_input, "\n");
+			wprintw(win_chat, "%s: %s\n", name.c_str(), buffer);
 			break;
 
 		case 8:
@@ -285,19 +286,32 @@ void HandleInput(ENetPeer * peer, std::string name)
 
 void ClientThread(int id, ENetHost* client, ENetPeer* peer, bool* running)
 {
-
-	Packet* pack;
+	//tile_map = new Tile[MAP_SIZE_X*MAP_SIZE_Y];
+	/*tile_map = new Tile*[MAP_SIZE_X];
+	for (int i = 0; i < MAP_SIZE_X; i++)
+	{
+		tile_map[i] = new Tile[MAP_SIZE_Y];
+	}*/
+	/*Packet* pack;
 	MessagePacket* msg_pack;
 	LookPacket* look_pack;
 	MovePacket* move_pack;
 	JoinPacket* join_pack;
 	MapPacket* map_pack;
-	PlayersPacket* players_pack;
+	PlayersPacket* players_pack;*/
+
+	Packet* pack = new Packet;
+	MessagePacket* msg_pack = new MessagePacket;
+	LookPacket* look_pack = new LookPacket;
+	MovePacket* move_pack = new MovePacket;
+	JoinPacket* join_pack = new JoinPacket;
+	MapPacket* map_pack = new MapPacket;
+	Tile* tiles;
+	PlayersPacket* players_pack = new PlayersPacket; 
 
 	ENetEvent event;
 	nodelay(win_input, true);
 	wprintw(win_input, "Username:");
-
 	char name[20];
 	echo();
 	wgetstr(win_input, name);
@@ -309,8 +323,38 @@ void ClientThread(int id, ENetHost* client, ENetPeer* peer, bool* running)
 	{
 		HandleInput(peer, name);
 		//wprintw(win_system, "-W-");
-		PrintMap(tile_map);
-		PrintPlayers(players);
+		int pos_x = 0;
+		int pos_y = 0;
+		int offset_x = 0;
+		int offset_y = 0;
+		for each (auto player in players)
+		{
+			if (strncmp(player.name, name, 20) == 0)
+			{
+				pos_x = player.x; 
+				pos_y = player.y;
+			}
+		}
+		if (pos_x > MAP_WIN_SIZE_X / 2)
+		{
+			offset_x = pos_x - MAP_WIN_SIZE_X / 2;
+		}
+		if (offset_x > MAP_SIZE_X - MAP_WIN_SIZE_X)
+		{
+			offset_x = MAP_SIZE_X - MAP_WIN_SIZE_X;
+		}
+
+		if (pos_y > MAP_WIN_SIZE_Y / 2)
+		{
+			offset_y = pos_y - MAP_WIN_SIZE_Y / 2;
+		}
+		if (offset_y > MAP_SIZE_Y - MAP_WIN_SIZE_Y)
+		{
+			offset_y = MAP_SIZE_Y - MAP_WIN_SIZE_Y;
+		}
+
+		PrintMap(tile_map, offset_x, offset_y);
+		PrintPlayers(players, offset_x, offset_y);
 
 		UpdateWindows();
 
@@ -341,11 +385,12 @@ void ClientThread(int id, ENetHost* client, ENetPeer* peer, bool* running)
 
 				case MAP:
 					map_pack = (MapPacket*)event.packet->data;
+					tiles = (Tile*)(((char*)map_pack) + sizeof(MapPacket));
 					for (int x = 0; x < MAP_SIZE_X; x++)
 					{
 						for (int y = 0; y < MAP_SIZE_Y; y++)
 						{
-							tile_map[x][y] = map_pack->map[x][y];
+							tile_map[x][y] = tiles[x + y*MAP_SIZE_X];
 						}
 					}
 					break;

@@ -37,47 +37,27 @@ std::vector<std::vector<char>> LoadMap(std::string filename)
 	}
 	for (int y = 0; y < MAP_SIZE_Y; y++)
 	{
-		//std::u32string
-		//char c = file.get();
 		std::string str;
 		std::getline(file, str);
-		
-		//unsigned char str[128];
-		//file.getline((char*)str, 128);
+
 		if (file.fail())
 		{
-			//break;
 		}
 
 		map.push_back(std::vector<char>());
 		for (int x = 0; x < MAP_SIZE_X; x++)
 		{
-			/*switch (str[x])
+			if (str.length() < x)
 			{
-			case 'W':
-				//map[y].push_back(219);
-				map[y].push_back('#');
-				break;
-			case 'S':
-				//map[y].push_back(176);
-				map[y].push_back('.');
-				break;
-			case 'G':
-				//map[y].push_back(177);
-				map[y].push_back(';');
-				break;
-			case 'B':
-				//map[y].push_back(178);
-				map[y].push_back('M');
-				break;
-			default:
+				map[y].push_back('W');
+			}
+			else
+			{
 				map[y].push_back(str[x]);
-				break;
-			}*/
-			map[y].push_back(str[x]);
-			if ((str[x] == '\n') || (str[x] == '\0'))
-			{
-				break;
+				if ((str[x] == '\n') || (str[x] == '\0'))
+				{
+					break;
+				}
 			}
 		}
 	}

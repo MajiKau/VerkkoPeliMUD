@@ -53,7 +53,14 @@ struct CommandPacket :Packet
 
 struct MapPacket :Packet
 {
-	Tile map[MAP_SIZE_X][MAP_SIZE_Y];
+	MapPacket()
+	{
+		map = new Tile[MAP_SIZE_X*MAP_SIZE_Y];
+		//map = std::vector<std::vector<Tile>>(MAP_SIZE_X, std::vector<Tile>(MAP_SIZE_Y, Tile()));
+	}
+	//std::vector<std::vector<Tile>> map;
+	//Tile map[MAP_SIZE_X][MAP_SIZE_Y];
+	Tile* map;
 };
 
 struct PlayersPacket :Packet
@@ -120,7 +127,52 @@ MessagePacket MessageP(std::string name, std::string message)
 	return pack;
 }
 
-MapPacket MapP(std::string name, Tile map[MAP_SIZE_X][MAP_SIZE_Y] )
+MapPacket MapP(std::string name, std::vector<std::vector<Tile>> map)
+{
+	if (name.size() > 19)
+	{
+		name.resize(19);
+	}
+	MapPacket pack;
+	pack.type = MAP;
+
+	
+
+	memcpy(pack.sender, name.c_str(), 20);
+	for (int x = 0; x < MAP_SIZE_X; x++)
+	{
+		for (int y = 0; y < MAP_SIZE_Y; y++)
+		{
+			pack.map[x + y*MAP_SIZE_X] = map[x][y];
+		}
+	}
+	//pack.map = map;
+	return pack;
+}
+
+MapPacket MapP(std::string name, Tile** map)
+{
+	if (name.size() > 19)
+	{
+		name.resize(19);
+	}
+	MapPacket pack;
+	pack.type = MAP;
+
+	memcpy(pack.sender, name.c_str(), 20);
+	for (int x = 0; x < MAP_SIZE_X; x++)
+	{
+		for (int y = 0; y < MAP_SIZE_Y; y++)
+		{
+			pack.map[x + y*MAP_SIZE_X] = map[x][y];
+			//pack.map[x][y] = map[x][y];
+		}
+	}
+	//pack.map = map;
+	return pack;
+}
+
+/*MapPacket MapP(std::string name, Tile map[MAP_SIZE_X][MAP_SIZE_Y] )
 {
 	if (name.size() > 19)
 	{
@@ -139,7 +191,7 @@ MapPacket MapP(std::string name, Tile map[MAP_SIZE_X][MAP_SIZE_Y] )
 	}
 	//pack.map = map;
 	return pack;
-}
+}*/
 
 PlayersPacket PlayersP(std::string name, Player players[MAX_PLAYERS])
 {
@@ -203,13 +255,16 @@ void SendMessageToPeer(ENetPeer* peer, Packet* package)
 	}
 	else if (package->type == MAP)
 	{
-		char* message[sizeof(MapPacket)];
+		char* message = new char[sizeof(MapPacket)+sizeof(Tile)*MAP_SIZE_X*MAP_SIZE_Y];
 		memcpy(message, package, sizeof(MapPacket));
+		memcpy(message + sizeof(MapPacket), ((MapPacket*)package)->map, sizeof(Tile)*MAP_SIZE_X*MAP_SIZE_Y);
 
 		ENetPacket * packet = enet_packet_create(message,
-			sizeof(message),
+			sizeof(MapPacket) + sizeof(Tile)*MAP_SIZE_X*MAP_SIZE_Y,
 			ENET_PACKET_FLAG_RELIABLE);
 		enet_peer_send(peer, 0, packet);
+
+		delete[] message;
 	}
 	else if (package->type == PLAYERS)
 	{

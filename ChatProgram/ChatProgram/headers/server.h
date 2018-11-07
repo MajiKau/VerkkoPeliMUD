@@ -13,7 +13,12 @@
 
 void CreateMap()
 {
-	
+
+	/*tile_map = new Tile*[MAP_SIZE_X];
+	for (int i = 0; i < MAP_SIZE_X; i++)
+	{
+		tile_map[i] = new Tile[MAP_SIZE_Y];
+	}*/
 
 	std::vector<std::vector<char>> map_v = LoadMap("../Content/map.json");
 
@@ -262,6 +267,7 @@ void DisconnectPeer(ENetPeer* peer, ENetHost* client)
 
 void ServerThread(int id, ENetHost* server, bool* running)
 {
+
 	//nodelay(win_input, true);
 	//halfdelay(1);
 	ENetEvent event;
@@ -270,13 +276,13 @@ void ServerThread(int id, ENetHost* server, bool* running)
 	//std::vector<ENetPeer*> connected_peers;
 	std::set<ENetPeer*> connected_peers;
 
-	Packet* pack;
-	MessagePacket* msg_pack;
-	LookPacket* look_pack;
-	MovePacket* move_pack;
-	JoinPacket* join_pack;
-	MapPacket* map_pack;
-	PlayersPacket* players_pack;
+	Packet* pack = new Packet;
+	MessagePacket* msg_pack = new MessagePacket;
+	LookPacket* look_pack = new LookPacket;
+	MovePacket* move_pack = new MovePacket;
+	JoinPacket* join_pack = new JoinPacket;
+	MapPacket* map_pack = new MapPacket;
+	PlayersPacket* players_pack = new PlayersPacket;
 
 	char c1 = 176;
 
@@ -300,10 +306,11 @@ void ServerThread(int id, ENetHost* server, bool* running)
 
 		for each (auto peer in connected_peers)
 		{
-			//map_pack = &MapP("", tile_map);
-			//SendMessageToPeer(peer, map_pack);
-			players_pack = &PlayersP("", players);
-			SendMessageToPeer(peer, players_pack);
+			if (num_of_players != 0)
+			{
+				players_pack = &PlayersP("", players);
+				SendMessageToPeer(peer, players_pack);
+			}
 		}
 
 		int enet_int = enet_host_service(server, &event, 0);
@@ -372,7 +379,7 @@ void ServerThread(int id, ENetHost* server, bool* running)
 
 				case JOIN:
 					join_pack = (JoinPacket*)event.packet->data;
-					players[num_of_players] = (Player(join_pack->sender, rand() % 10, rand() % 10));
+					players[num_of_players] = (Player(join_pack->sender, rand() % 10 + 1, rand() % 10 + 1));
 					num_of_players++;
 
 					map_pack = &MapP("", tile_map);
