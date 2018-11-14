@@ -23,6 +23,11 @@ std::vector<WINDOW*> window_borders;
 #define TERM_COLOR_WALL 4
 #define TERM_COLOR_SAND 5
 #define TERM_COLOR_WATER 6
+#define TERM_COLOR_GROUND 7
+#define TERM_COLOR_FLOOR 8
+#define TERM_COLOR_SPAWN 9
+#define TERM_COLOR_DOORCLOSED 10
+#define TERM_COLOR_DOOROPEN 11
 
 #define MAP_WIN_SIZE_X 93
 #define MAP_WIN_SIZE_Y 54
@@ -56,9 +61,9 @@ void PrintMap(std::vector<std::vector<Tile>> &map, int offset_x, int offset_y)
 			switch (map[x + offset_x][y + offset_y].type)
 			{
 			case GROUND:
-				wattron(win_map, COLOR_PAIR(TERM_COLOR_GRASS));
+				wattron(win_map, COLOR_PAIR(TERM_COLOR_GROUND));
 				mvwaddch(win_map, y, x, 177);
-				wattroff(win_map, COLOR_PAIR(TERM_COLOR_GRASS));
+				wattroff(win_map, COLOR_PAIR(TERM_COLOR_GROUND));
 				break;
 			case GRASS:
 				wattron(win_map, COLOR_PAIR(TERM_COLOR_GRASS));
@@ -79,6 +84,36 @@ void PrintMap(std::vector<std::vector<Tile>> &map, int offset_x, int offset_y)
 				wattron(win_map, COLOR_PAIR(TERM_COLOR_WALL));
 				mvwaddch(win_map, y, x, 177);
 				wattroff(win_map, COLOR_PAIR(TERM_COLOR_WALL));
+				break;
+			case FLOOR:
+				wattron(win_map, COLOR_PAIR(TERM_COLOR_FLOOR));
+				mvwaddch(win_map, y, x, 177);
+				wattroff(win_map, COLOR_PAIR(TERM_COLOR_FLOOR));
+				break;
+			case SPAWN:
+				wattron(win_map, COLOR_PAIR(TERM_COLOR_SPAWN));
+				mvwaddch(win_map, y, x, 'X');
+				wattroff(win_map, COLOR_PAIR(TERM_COLOR_SPAWN));
+				break;
+			case ANIMALSPAWN:
+				wattron(win_map, COLOR_PAIR(TERM_COLOR_SPAWN));
+				mvwaddch(win_map, y, x, 'Z');
+				wattroff(win_map, COLOR_PAIR(TERM_COLOR_SPAWN));
+				break;
+			case DOOR:
+				if (map[x + offset_x][y + offset_y].walkable) 
+				{
+					wattron(win_map, COLOR_PAIR(TERM_COLOR_DOOROPEN));
+					mvwaddch(win_map, y, x, '#');
+					wattroff(win_map, COLOR_PAIR(TERM_COLOR_DOOROPEN));
+				}
+				else
+				{
+					wattron(win_map, COLOR_PAIR(TERM_COLOR_DOORCLOSED));
+					mvwaddch(win_map, y, x, '#');
+					wattroff(win_map, COLOR_PAIR(TERM_COLOR_DOORCLOSED));
+
+				}
 				break;
 			default:
 				wattron(win_map, COLOR_PAIR(TERM_COLOR_PLAYER));
@@ -184,7 +219,7 @@ void PrintMap(std::vector<std::vector<Tile>> &map, int offset_x, int offset_y)
 	}
 }*/
 
-void PrintMap(std::vector<std::vector<Tile>> &map)
+/*void PrintMap(std::vector<std::vector<Tile>> &map)
 {
 	for (int x = 0; x < MAP_WIN_SIZE_X && x < MAP_SIZE_X; x++)
 	{
@@ -228,7 +263,7 @@ void PrintMap(std::vector<std::vector<Tile>> &map)
 			}
 		}
 	}
-}
+}*/
 
 /*void PrintMap(Tile** map)
 {
@@ -487,18 +522,40 @@ void UpdateWindowSizes()
 	wprintw(win_system, "Terminal Y:%i, X:%i\n", LINES, COLS);
 }
 
-void PrintPlayers(Player players[MAX_PLAYERS], int offset_x, int offset_y)
+void PrintPlayers(Player players[MAX_PLAYERS], int offset_x, int offset_y, std::string name = "")
 {
 	wattron(win_map, COLOR_PAIR(TERM_COLOR_PLAYER));
 	for each (auto player in players)
 	{
 		if (player.x > -1 && player.y > -1 && player.x <= MAP_WIN_SIZE_X + offset_x && player.y <= MAP_WIN_SIZE_Y + offset_y)
-		mvwaddch(win_map, player.y - offset_y, player.x - offset_x, '@');
+		{
+			if (player.name == name)
+			{
+				mvwaddch(win_map, player.y - offset_y, player.x - offset_x, '@');
+			}
+			else
+			{
+				mvwaddch(win_map, player.y - offset_y, player.x - offset_x, '$');
+			}
+		}
 	}
 	wattroff(win_map, COLOR_PAIR(TERM_COLOR_PLAYER));
 }
 
-void PrintPlayers(Player players[MAX_PLAYERS])
+void PrintAnimals(std::vector<Animal> animals, int offset_x, int offset_y)
+{
+	wattron(win_map, COLOR_PAIR(TERM_COLOR_PLAYER));
+	for each (auto animal in animals)
+	{
+		if (animal.x > -1 && animal.y > -1 && animal.x <= MAP_WIN_SIZE_X + offset_x && animal.y <= MAP_WIN_SIZE_Y + offset_y)
+		{
+			mvwaddch(win_map, animal.y - offset_y, animal.x - offset_x, '*');
+		}
+	}
+	wattroff(win_map, COLOR_PAIR(TERM_COLOR_PLAYER));
+}
+
+/*void PrintPlayers(Player players[MAX_PLAYERS])
 {
 	wattron(win_map, COLOR_PAIR(TERM_COLOR_PLAYER));
 	//wattron(win_map, A_BLINK);
@@ -509,7 +566,7 @@ void PrintPlayers(Player players[MAX_PLAYERS])
 	}
 	//wattroff(win_map, A_BLINK);
 	wattroff(win_map, COLOR_PAIR(TERM_COLOR_PLAYER));
-}
+}*/
 
 SYSTEMTIME* sys_time = new SYSTEMTIME();
 void UpdateWindows()
@@ -600,12 +657,19 @@ void InitWindows()
 	start_color();
 	PDC_set_blink(true);
 
+
+
 	init_pair(TERM_COLOR_DEFAULT, COLOR_WHITE, COLOR_BLACK);
 	init_pair(TERM_COLOR_GRASS, COLOR_BLACK, COLOR_GREEN);
 	init_pair(TERM_COLOR_PLAYER, COLOR_BLUE, COLOR_GREEN);
 	init_pair(TERM_COLOR_WALL, COLOR_BLACK, COLOR_WHITE);
 	init_pair(TERM_COLOR_SAND, COLOR_BLACK, COLOR_YELLOW);
 	init_pair(TERM_COLOR_WATER, COLOR_CYAN, COLOR_BLUE);
+	init_pair(TERM_COLOR_GROUND, COLOR_RED, COLOR_YELLOW);
+	init_pair(TERM_COLOR_FLOOR, COLOR_YELLOW, COLOR_GREEN);
+	init_pair(TERM_COLOR_SPAWN, COLOR_WHITE, COLOR_BLUE);
+	init_pair(TERM_COLOR_DOOROPEN, COLOR_WHITE, COLOR_YELLOW);
+	init_pair(TERM_COLOR_DOORCLOSED, COLOR_BLACK, COLOR_YELLOW);
 
 	keypad(win_input, TRUE);
 

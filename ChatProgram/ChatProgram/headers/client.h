@@ -354,7 +354,7 @@ void ClientThread(int id, ENetHost* client, ENetPeer* peer, bool* running)
 		}
 
 		PrintMap(tile_map, offset_x, offset_y);
-		PrintPlayers(players, offset_x, offset_y);
+		PrintPlayers(players, offset_x, offset_y, name);
 
 		UpdateWindows();
 

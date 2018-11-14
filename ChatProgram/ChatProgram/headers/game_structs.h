@@ -1,4 +1,5 @@
 #pragma once
+#include <vector>
 
 #define MAP_SIZE_X 301
 #define MAP_SIZE_Y 80
@@ -9,6 +10,7 @@ struct Player
 {
 	char name[20];
 	int x, y;
+	int score;
 	Player()
 	{
 		x = -1;
@@ -19,6 +21,19 @@ struct Player
 		strncpy_s(name, _name, 20);
 		x = _x;
 		y = _y;
+		score = 0;
+	}
+};
+
+struct Animal
+{
+	int x, y;
+	float cooldown;
+	Animal(int _x, int _y)
+	{
+		x = _x;
+		y = _y;
+		cooldown = 1.0f;
 	}
 };
 
@@ -28,7 +43,12 @@ enum tiletype
 	GRASS,
 	SAND,
 	WATER,
-	WALL
+	WALL,
+	FLOOR,
+	SPAWN,
+	DOOR,
+	ANIMALSPAWN
+
 };
 
 struct Tile
@@ -55,3 +75,5 @@ std::vector<std::vector<Tile>> tile_map(MAP_SIZE_X, std::vector<Tile>(MAP_SIZE_Y
 
 int num_of_players = 0;
 Player players[MAX_PLAYERS];
+
+std::vector<Animal> animals;

@@ -1,26 +1,68 @@
 ﻿#pragma once
 #include <enet/enet.h>
 #include <vector>
+#include <time.h>
 
 #include "game_structs.h"
 #include "file_reader.h"
 
+int spawnpoint_x = 1;
+int spawnpoint_y = 1;
 
-//char map[MAP_SIZE_X][MAP_SIZE_Y];
+int animal_spawnpoint_x = 1;
+int animal_spawnpoint_y = 1;
 
+float deltatime = 0;
 
+void SpawnAnimals()
+{
+	for (int i = 0; i < 10; i++)
+	{
+		animals.push_back(Animal(animal_spawnpoint_x, animal_spawnpoint_y));
+	}
+}
 
+void UpdateAnimals(float dt)
+{
+	for (auto& animal : animals)
+	{
+		animal.cooldown -= dt;
+		if (animal.cooldown <= 0)
+		{
+			int rand_dir = rand() % 4;
+			int dx = 0;
+			int dy = 0;
+			switch (rand_dir)
+			{
+			case 0:
+				dx = 1;
+				break;
+			case 1:
+				dx = -1;
+				break;
+			case 2:
+				dy = 1;
+				break;
+			case 3:
+				dy = -1;
+				break;
+			default:
+				break;
+			}
+			if (tile_map[animal.x + dx][animal.y + dy].walkable)
+			{
+				animal.x += dx;
+				animal.y += dy;
+				animal.cooldown = rand()%4 + 1 * 0.25f;
+			}
+		}
+	}
+}
 
 void CreateMap()
 {
 
-	/*tile_map = new Tile*[MAP_SIZE_X];
-	for (int i = 0; i < MAP_SIZE_X; i++)
-	{
-		tile_map[i] = new Tile[MAP_SIZE_Y];
-	}*/
-
-	std::vector<std::vector<char>> map_v = LoadMap("../Content/map.json");
+	std::vector<std::vector<char>> map_v = LoadMap("../Content/map/map.txt");
 
 	for (int y = 0; y < MAP_SIZE_Y; y++)
 	{
@@ -40,6 +82,18 @@ void CreateMap()
 
 			switch (map_v[y][x])
 			{
+			case '0':
+				tile_map[x][y].type = GRASS;
+				tile_map[x][y].walkable = true;
+				break;
+			case '1':
+				tile_map[x][y].type = WALL;
+				tile_map[x][y].walkable = false;
+				break;
+			case '2':
+				tile_map[x][y].type = GROUND;
+				tile_map[x][y].walkable = true;
+				break;
 			case 'S':
 				tile_map[x][y].type = SAND;
 				tile_map[x][y].walkable = true;
@@ -56,15 +110,33 @@ void CreateMap()
 				tile_map[x][y].type = WALL;
 				tile_map[x][y].walkable = false;
 				break;
-			case '0':
-				tile_map[x][y].type = GROUND;
+			case 'F':
+				tile_map[x][y].type = FLOOR;
 				tile_map[x][y].walkable = true;
+				break;
+			case 'P':
+				tile_map[x][y].type = SPAWN;
+				tile_map[x][y].walkable = true;
+				spawnpoint_x = x;
+				spawnpoint_y = y;
+				break;
+			case 'D':
+				tile_map[x][y].type = DOOR;
+				tile_map[x][y].walkable = false;
+				break;
+			case 'A':
+				tile_map[x][y].type = ANIMALSPAWN;
+				tile_map[x][y].walkable = true;
+				animal_spawnpoint_x = x;
+				animal_spawnpoint_y = y;
 				break;
 			default:
 				break;
 			}
 		}
 	}
+
+	SpawnAnimals();
 }
 std::string HandleMovement(MovePacket* packet)
 {
@@ -87,20 +159,48 @@ std::string HandleMovement(MovePacket* packet)
 	switch (packet->dir)
 	{	
 	case NORTH:
-		if(tile_map[player->x][player->y-1].walkable)
-		player->y -= 1;
+		if (tile_map[player->x][player->y - 1].walkable)
+		{
+			player->y -= 1;
+		}
+		else if (tile_map[player->x][player->y - 1].type == DOOR)
+		{
+			tile_map[player->x][player->y - 1].walkable = true;
+			message = "You opened a door.";
+		}
 		break;
 	case WEST:
-		if (tile_map[player->x-1][player->y].walkable)
-		player->x -= 1;
+		if (tile_map[player->x - 1][player->y].walkable)
+		{
+			player->x -= 1;
+		}
+		else if (tile_map[player->x - 1][player->y].type == DOOR)
+		{
+			tile_map[player->x - 1][player->y].walkable = true;
+			message = "You opened a door.";
+		}
 		break;
 	case SOUTH:
 		if (tile_map[player->x][player->y + 1].walkable)
-		player->y += 1;
+		{
+			player->y += 1;
+		}
+		else if (tile_map[player->x][player->y + 1].type == DOOR)
+		{
+			tile_map[player->x][player->y + 1].walkable = true;
+			message = "You opened a door.";
+		}
 		break;
 	case EAST:
-		if (tile_map[player->x+1][player->y].walkable)
-		player->x += 1;
+		if (tile_map[player->x + 1][player->y].walkable)
+		{
+			player->x += 1;
+		}
+		else if (tile_map[player->x + 1][player->y].type == DOOR)
+		{
+			tile_map[player->x + 1][player->y].walkable = true;
+			message = "You opened a door.";
+		}
 		break;
 	/*case 'l':
 		switch (tile_map[player->x][player->y].type)
@@ -267,7 +367,6 @@ void DisconnectPeer(ENetPeer* peer, ENetHost* client)
 
 void ServerThread(int id, ENetHost* server, bool* running)
 {
-
 	//nodelay(win_input, true);
 	//halfdelay(1);
 	ENetEvent event;
@@ -284,24 +383,32 @@ void ServerThread(int id, ENetHost* server, bool* running)
 	MapPacket* map_pack = new MapPacket;
 	PlayersPacket* players_pack = new PlayersPacket;
 
-	char c1 = 176;
+	char c1 = (char)176;
 
-	char c2 = 177;
+	char c2 = (char)177;
 
-	char c3 = 178;
+	char c3 = (char)178;
 
-	char c4 = 219;
+	char c4 = (char)219;
 
 	wprintw(win_system, "%c(%i),%c(%i),%c(%i),%c(%i)\n", c1, c1, c2, c2, c3, c3, c4, c4);
 
 
+	clock_t current_time = clock();
+	clock_t previous_time = current_time;
+
 	while (running)
 	{
-		//wgetch(win_input);
+		previous_time = current_time;
+		current_time = clock();
+		deltatime = (float)(current_time - previous_time) / CLOCKS_PER_SEC;
+		wprintw(win_system, "Deltatime:%f\n", deltatime);
 
-		//PrintMap(map);
-		PrintMap(tile_map);
-		PrintPlayers(players);
+		UpdateAnimals(deltatime);
+
+		PrintMap(tile_map, 0, 0);
+		PrintPlayers(players, 0, 0);
+		PrintAnimals(animals, 0, 0);
 		UpdateWindows();
 
 		for each (auto peer in connected_peers)
@@ -379,9 +486,8 @@ void ServerThread(int id, ENetHost* server, bool* running)
 
 				case JOIN:
 					join_pack = (JoinPacket*)event.packet->data;
-					players[num_of_players] = (Player(join_pack->sender, rand() % 10 + 1, rand() % 10 + 1));
+					players[num_of_players] = (Player(join_pack->sender, spawnpoint_x,spawnpoint_y));
 					num_of_players++;
-
 					map_pack = &MapP("", tile_map);
 					SendMessageToPeer(event.peer, map_pack);
 					break;
@@ -412,6 +518,6 @@ void ServerThread(int id, ENetHost* server, bool* running)
 				connected_peers.erase(event.peer);
 			}
 		}
-		//Sleep(10);
+		Sleep(1);
 	}
 }
