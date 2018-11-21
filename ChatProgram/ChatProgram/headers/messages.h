@@ -1,5 +1,7 @@
 #pragma once
 
+#include <chrono>
+
 enum MessageType
 {
 	MOVEMENT,
@@ -25,6 +27,7 @@ struct Packet
 {
 	MessageType type;
 	char sender[20];
+	std::chrono::milliseconds time;
 };
 
 struct MessagePacket :Packet
@@ -213,6 +216,7 @@ PlayersPacket PlayersP(std::string name, Player players[MAX_PLAYERS])
 
 void SendMessageToPeer(ENetPeer* peer, Packet* package)
 {
+	package->time = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
 	if (package->type == CHAT)
 	{
 		char* message[sizeof(MessagePacket)];

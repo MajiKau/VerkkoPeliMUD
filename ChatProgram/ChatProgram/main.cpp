@@ -26,7 +26,7 @@
 #include "server.h"
 #include "curses_windows.h"
 
-//TODO: DOORS, Clientside prediction, COMBAT(????), Server send TileUpdatePacket to update doors and other things!
+//TODO: DOORS, Clientside prediction, COMBAT(????), Server send TileUpdatePacket to update doors and other things!, DelayedFunction(void* func, varargs args
 
 bool running = true;
 

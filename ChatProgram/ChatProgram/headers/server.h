@@ -5,6 +5,9 @@
 
 #include "game_structs.h"
 #include "file_reader.h"
+#include "delayfunc.h"
+
+#define LAG_ENABLED
 
 int spawnpoint_x = 1;
 int spawnpoint_y = 1;
@@ -202,19 +205,6 @@ std::string HandleMovement(MovePacket* packet)
 			message = "You opened a door.";
 		}
 		break;
-	/*case 'l':
-		switch (tile_map[player->x][player->y].type)
-		{
-		case GRASS:
-			message = "Green grass.";
-			break;
-		case SAND:
-			message = "Sand.";
-			break;
-		default:
-			message = "You don't know what that is.";
-			break;
-		}*/
 		
 		break;
 	default:
@@ -365,23 +355,165 @@ void DisconnectPeer(ENetPeer* peer, ENetHost* client)
 	//DO THINGS HERE
 }
 
+int num_of_connected_clients = 0;
+std::set<ENetPeer*> connected_peers;
+
+/*Packet* pack = new Packet;
+MessagePacket* msg_pack = new MessagePacket;
+LookPacket* look_pack = new LookPacket;
+MovePacket* move_pack = new MovePacket;
+JoinPacket* join_pack = new JoinPacket;
+MapPacket* map_pack = new MapPacket;
+PlayersPacket* players_pack = new PlayersPacket;*/
+
+void HandleEvent(ENetEvent event, ENetHost* server)
+{
+
+	std::string name = "Client:" + std::to_string(num_of_connected_clients);
+	std::string message = "";
+	ENetPeer* peer = event.peer;
+
+	switch (event.type)
+	{
+	case ENET_EVENT_TYPE_CONNECT:
+		wprintw(win_system, "A new client connected from %x:%u.",
+			event.peer->address.host,
+			event.peer->address.port);
+		/* Store any relevant client information here. */
+		event.peer->data = (void*)name.c_str();
+		connected_peers.insert(event.peer);
+		num_of_connected_clients++;
+		break;
+	case ENET_EVENT_TYPE_RECEIVE:
+	{
+
+		switch (((Packet*)(event.packet->data))->type)
+		{
+
+		case CHAT:
+		{
+			MessagePacket* msg_pack = new MessagePacket();
+			*msg_pack = *(MessagePacket*)event.packet->data;
+
+			for each (auto c_peer in connected_peers)
+			{
+				if (c_peer == event.peer)
+					continue;
+
+#ifdef LAG_ENABLED
+				std::function<void()> func = [c_peer, msg_pack]() { SendMessageToPeer(c_peer, msg_pack); };
+				DelayedFunction(func, 0.5f);
+#else
+				SendMessageToPeer(peer, msg_pack);
+#endif
+
+			}
+
+			wprintw(win_chat, "%s: %s\n", msg_pack->sender, msg_pack->message);
+
+			wprintw(win_system, "[%s]", msg_pack->message);
+			break;
+		}
+
+		case MOVEMENT:
+		{
+			MovePacket* move_pack = (MovePacket*)event.packet->data;
+			message = HandleMovement(move_pack);
+			if (message != "")
+			{
+#ifdef LAG_ENABLED
+				std::function<void()> func = [peer, message]() { SendMessageToPeer(peer, &MessageP("[Movement]", message)); };
+				DelayedFunction(func, 0.5f);
+#else
+				SendMessageToPeer(event.peer, &MessageP("[Movement]", message));
+#endif
+
+			}
+			wprintw(win_system, "[%d]", move_pack->dir);
+			break;
+		}
+
+		case LOOK:
+		{
+			LookPacket* look_pack = (LookPacket*)event.packet->data;
+			message = HandleLook(look_pack);
+			if (message != "")
+			{
+#ifdef LAG_ENABLED
+				std::function<void()> func = [peer, message]() { SendMessageToPeer(peer, &MessageP("[Look]", message)); };
+				DelayedFunction(func, 0.5f);
+#else
+				SendMessageToPeer(event.peer, &MessageP("[Look]", message));
+#endif
+			}
+			wprintw(win_system, "[%d]", look_pack->dir);
+			break;
+		}
+
+		case COMMAND:
+		{
+			break;
+		}
+
+		case JOIN:
+		{
+			JoinPacket* join_pack = (JoinPacket*)event.packet->data;
+			players[num_of_players] = (Player(join_pack->sender, spawnpoint_x, spawnpoint_y));
+			num_of_players++;
+			MapPacket* map_pack = new MapPacket();
+			*map_pack = MapP("", tile_map);
+#ifdef LAG_ENABLED
+				std::function<void()> func = [peer, map_pack]() { SendMessageToPeer(peer, map_pack); };
+				DelayedFunction(func, 0.5f);
+#else
+			SendMessageToPeer(event.peer, map_pack);
+#endif
+			break;
+		}
+
+		default:
+		{
+			break;
+		}
+
+		}
+
+		Packet* pack = (Packet*)event.packet->data;
+
+		wprintw(win_system, "A packet of length %u was received from %s on channel %u.\n",
+			(unsigned int)event.packet->dataLength,
+			pack->sender,
+			event.channelID);
+
+		/* Clean up the packet now that we're done using it. */
+		enet_packet_destroy(event.packet);
+
+		break;
+	}
+
+	case ENET_EVENT_TYPE_DISCONNECT:
+	{
+		wprintw(win_system, "%s disconnected.", (char*)event.peer->data);
+		/* Reset the peer's client information. */
+
+
+		event.peer->data = NULL;
+		connected_peers.erase(event.peer);
+		break;
+	}
+
+	}
+}
+
+
 void ServerThread(int id, ENetHost* server, bool* running)
 {
 	//nodelay(win_input, true);
 	//halfdelay(1);
-	ENetEvent event;
-	int num_of_connected_clients = 0;
-	std::string stop_message = "/stop";
 	//std::vector<ENetPeer*> connected_peers;
-	std::set<ENetPeer*> connected_peers;
 
-	Packet* pack = new Packet;
-	MessagePacket* msg_pack = new MessagePacket;
-	LookPacket* look_pack = new LookPacket;
-	MovePacket* move_pack = new MovePacket;
-	JoinPacket* join_pack = new JoinPacket;
-	MapPacket* map_pack = new MapPacket;
-	PlayersPacket* players_pack = new PlayersPacket;
+
+	ENetEvent event;
 
 	char c1 = (char)176;
 
@@ -402,121 +534,50 @@ void ServerThread(int id, ENetHost* server, bool* running)
 		previous_time = current_time;
 		current_time = clock();
 		deltatime = (float)(current_time - previous_time) / CLOCKS_PER_SEC;
-		wprintw(win_system, "Deltatime:%f\n", deltatime);
+		//wprintw(win_system, "Deltatime:%f\n", deltatime);
 
 		UpdateAnimals(deltatime);
+
+#ifdef LAG_ENABLED
+		DelayedFunctionUpdate(deltatime);
+#endif // LAG_ENABLED
+
 
 		PrintMap(tile_map, 0, 0);
 		PrintPlayers(players, 0, 0);
 		PrintAnimals(animals, 0, 0);
 		UpdateWindows();
 
-		for each (auto peer in connected_peers)
+		for each (auto c_peer in connected_peers)
 		{
 			if (num_of_players != 0)
 			{
-				players_pack = &PlayersP("", players);
-				SendMessageToPeer(peer, players_pack);
+				PlayersPacket* players_pack = new PlayersPacket();
+				*players_pack = PlayersP("", players);
+
+#ifdef LAG_ENABLED
+				std::function<void()> func = [c_peer, players_pack]() { SendMessageToPeer(c_peer, players_pack); };
+				DelayedFunction(func, 0.5f);
+#else
+				SendMessageToPeer(peer, &players_pack);
+#endif
+
 			}
 		}
 
 		int enet_int = enet_host_service(server, &event, 0);
-		std::string name = "Client:" + std::to_string(num_of_connected_clients);
-		std::string message = "";
+		
 		/* Wait up to 0 milliseconds for an event. */
 		if (enet_int > 0)
 		{
-			switch (event.type)
-			{
-			case ENET_EVENT_TYPE_CONNECT:
-				wprintw(win_system, "A new client connected from %x:%u.",
-					event.peer->address.host,
-					event.peer->address.port);
-				/* Store any relevant client information here. */
-				event.peer->data = (void*)name.c_str();
-				connected_peers.insert(event.peer);
-				num_of_connected_clients++;
-				break;
-			case ENET_EVENT_TYPE_RECEIVE:
 
-				switch (((Packet*)(event.packet->data))->type)
-				{
-				case CHAT:
-					msg_pack = (MessagePacket*)event.packet->data;
+#ifdef LAG_ENABLED
+			std::function<void()> func = [event, server]() { HandleEvent(event, server); };
+			DelayedFunction(func, 0.5f);
+#else
+			HandleEvent(event, server);
+#endif
 
-					for each (auto peer in connected_peers)
-					{
-						if (peer == event.peer && *running == true)
-							continue;
-						SendMessageToPeer(peer, msg_pack);
-						if (!running)
-						{
-							DisconnectPeer(peer, server);
-						}
-					}
-
-					wprintw(win_chat, "%s: %s\n", msg_pack->sender, msg_pack->message);
-
-					wprintw(win_system, "[%s]", msg_pack->message);
-					break;
-
-				case MOVEMENT:
-					move_pack = (MovePacket*)event.packet->data;
-					message = HandleMovement(move_pack);
-					if (message != "")
-					{
-						SendMessageToPeer(event.peer, &MessageP("[Movement]",message));
-
-					}
-					wprintw(win_system, "[%d]", move_pack->dir);
-					break;
-
-				case LOOK:
-					look_pack = (LookPacket*)event.packet->data;
-					message = HandleLook(look_pack);
-					if (message != "")
-					{
-						SendMessageToPeer(event.peer, &MessageP("[Look]", message));
-					}
-					wprintw(win_system, "[%d]", look_pack->dir);
-					break;
-
-				case COMMAND:
-					break;
-
-				case JOIN:
-					join_pack = (JoinPacket*)event.packet->data;
-					players[num_of_players] = (Player(join_pack->sender, spawnpoint_x,spawnpoint_y));
-					num_of_players++;
-					map_pack = &MapP("", tile_map);
-					SendMessageToPeer(event.peer, map_pack);
-					break;
-
-				default:
-					break;
-
-				}
-
-				pack = (Packet*)event.packet->data;
-
-				wprintw(win_system, "A packet of length %u was received from %s on channel %u.\n",
-					(unsigned int)event.packet->dataLength,
-					pack->sender,
-					event.channelID);
-
-				/* Clean up the packet now that we're done using it. */
-				enet_packet_destroy(event.packet);
-
-				break;
-
-			case ENET_EVENT_TYPE_DISCONNECT:
-				wprintw(win_system, "%s disconnected.", (char*)event.peer->data);
-				/* Reset the peer's client information. */
-
-
-				event.peer->data = NULL;
-				connected_peers.erase(event.peer);
-			}
 		}
 		Sleep(1);
 	}

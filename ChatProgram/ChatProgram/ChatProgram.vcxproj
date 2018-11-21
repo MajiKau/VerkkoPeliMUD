@@ -171,6 +171,7 @@
   <ItemGroup>
     <ClInclude Include="headers\client.h" />
     <ClInclude Include="headers\curses_windows.h" />
+    <ClInclude Include="headers\delayfunc.h" />
     <ClInclude Include="headers\file_reader.h" />
     <ClInclude Include="headers\messages.h" />
     <ClInclude Include="headers\server.h" />

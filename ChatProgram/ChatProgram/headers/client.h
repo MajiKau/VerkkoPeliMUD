@@ -1,5 +1,6 @@
 #pragma once
 #include <enet/enet.h>
+#include <chrono>
 
 #include "game_structs.h"
 #include "curses_windows.h"
@@ -145,6 +146,75 @@ bool typing = false;
 char* buffer;
 int index;
 
+std::vector <std::pair<std::chrono::milliseconds, Direction>> inputs;
+
+void MovementPrediction(std::string name, Direction direction) //TODO: compare time to times got from the server
+{
+	Player* player = NULL;
+	for (int i = 0; i < MAX_PLAYERS; i++)
+	{
+		std::string pl_name(players[i].name);
+		if (pl_name == name)
+		{
+			player = &players[i];
+		}
+	}
+	if (player == NULL)
+	{
+		return;
+	}
+
+	inputs.push_back({ std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()) ,direction });
+
+	switch (direction)
+	{
+	case NORTH:
+		if (tile_map[player->x][player->y - 1].walkable)
+		{
+			player->y -= 1;
+		}
+		else if (tile_map[player->x][player->y - 1].type == DOOR)
+		{
+			tile_map[player->x][player->y - 1].walkable = true;//Maybe remove?
+		}
+		break;
+	case WEST:
+		if (tile_map[player->x - 1][player->y].walkable)
+		{
+			player->x -= 1;
+		}
+		else if (tile_map[player->x - 1][player->y].type == DOOR)
+		{
+			tile_map[player->x - 1][player->y].walkable = true;
+		}
+		break;
+	case SOUTH:
+		if (tile_map[player->x][player->y + 1].walkable)
+		{
+			player->y += 1;
+		}
+		else if (tile_map[player->x][player->y + 1].type == DOOR)
+		{
+			tile_map[player->x][player->y + 1].walkable = true;
+		}
+		break;
+	case EAST:
+		if (tile_map[player->x + 1][player->y].walkable)
+		{
+			player->x += 1;
+		}
+		else if (tile_map[player->x + 1][player->y].type == DOOR)
+		{
+			tile_map[player->x + 1][player->y].walkable = true;
+		}
+		break;
+
+		break;
+	default:
+		break;
+	}
+}
+
 void HandleInput(ENetPeer * peer, std::string name)
 {
 	if (!typing)
@@ -162,18 +232,22 @@ void HandleInput(ENetPeer * peer, std::string name)
 
 		case 'w':
 			SendMessageToPeer(peer, &MovementP(name, NORTH));
+			MovementPrediction(name, NORTH);
 			break;
 
 		case 'a':
 			SendMessageToPeer(peer, &MovementP(name, WEST));
+			MovementPrediction(name, WEST);
 			break;
 
 		case 's':
 			SendMessageToPeer(peer, &MovementP(name, SOUTH));
+			MovementPrediction(name, SOUTH);
 			break;
 
 		case 'd':
 			SendMessageToPeer(peer, &MovementP(name, EAST));
+			MovementPrediction(name, EAST);
 			break;
 
 		case 'l':
@@ -211,35 +285,6 @@ void HandleInput(ENetPeer * peer, std::string name)
 			index = 0;
 			wprintw(win_input, "MSG:");
 
-			/*msg = new char[1000];
-
-
-			flushinp();
-			wprintw(win_input, "MSG:");
-			echo();
-
-			wgetstr(win_input, msg);
-			noecho();
-			wprintw(win_chat, "%s: %s\n", name.c_str(), msg);
-
-			str = std::string(msg);
-			if (msg[0] == '/')
-			{
-				if (str == "/quit")
-				{
-					//running = false;
-					exit(0);
-					break;
-				}
-				if (str == "/stop")
-				{
-					SendMessageToPeer(peer, &MessageP(name, msg));
-				}
-			}
-			else if(str != "")
-			{
-				SendMessageToPeer(peer, &MessageP(name, msg));
-			}*/
 			break;
 
 		default:
