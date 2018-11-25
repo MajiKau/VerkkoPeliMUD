@@ -11,6 +11,7 @@ struct Player
 	char name[20];
 	int x, y;
 	int score;
+	unsigned int last_input_sequence_number = 0;
 	Player()
 	{
 		x = -1;

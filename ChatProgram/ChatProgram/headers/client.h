@@ -1,11 +1,13 @@
 #pragma once
 #include <enet/enet.h>
-#include <chrono>
+#include <list>
 
 #include "game_structs.h"
 #include "curses_windows.h"
 #include "messages.h"
 
+static unsigned int client_packet_sequence = 0;
+static unsigned int server_packet_sequence = 0;
 
 ENetPeer * ConnectToHost(ENetHost* client)
 {
@@ -146,10 +148,33 @@ bool typing = false;
 char* buffer;
 int index;
 
-std::vector <std::pair<std::chrono::milliseconds, Direction>> inputs;
+std::list <std::pair<unsigned int, Direction>> inputs;
 
-void MovementPrediction(std::string name, Direction direction) //TODO: compare time to times got from the server
+void MovementPrediction(Direction direction)
 {
+	inputs.push_back({ client_packet_sequence ,direction });
+	client_packet_sequence++;
+}
+
+void PlayerReconciliation(std::string name)
+{
+	if (server_packet_sequence == client_packet_sequence)
+	{
+		return;
+	}
+
+	if (inputs.size() != 0)
+	{
+		while (server_packet_sequence >= inputs.front().first)
+		{
+			inputs.pop_front();
+			if (inputs.size() == 0)
+			{
+				break;
+			}
+		}
+	}
+
 	Player* player = NULL;
 	for (int i = 0; i < MAX_PLAYERS; i++)
 	{
@@ -164,54 +189,60 @@ void MovementPrediction(std::string name, Direction direction) //TODO: compare t
 		return;
 	}
 
-	inputs.push_back({ std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()) ,direction });
 
-	switch (direction)
+
+	for (auto input : inputs)
 	{
-	case NORTH:
-		if (tile_map[player->x][player->y - 1].walkable)
-		{
-			player->y -= 1;
-		}
-		else if (tile_map[player->x][player->y - 1].type == DOOR)
-		{
-			tile_map[player->x][player->y - 1].walkable = true;//Maybe remove?
-		}
-		break;
-	case WEST:
-		if (tile_map[player->x - 1][player->y].walkable)
-		{
-			player->x -= 1;
-		}
-		else if (tile_map[player->x - 1][player->y].type == DOOR)
-		{
-			tile_map[player->x - 1][player->y].walkable = true;
-		}
-		break;
-	case SOUTH:
-		if (tile_map[player->x][player->y + 1].walkable)
-		{
-			player->y += 1;
-		}
-		else if (tile_map[player->x][player->y + 1].type == DOOR)
-		{
-			tile_map[player->x][player->y + 1].walkable = true;
-		}
-		break;
-	case EAST:
-		if (tile_map[player->x + 1][player->y].walkable)
-		{
-			player->x += 1;
-		}
-		else if (tile_map[player->x + 1][player->y].type == DOOR)
-		{
-			tile_map[player->x + 1][player->y].walkable = true;
-		}
-		break;
+		Direction direction = input.second;
 
-		break;
-	default:
-		break;
+
+		switch (direction)
+		{
+		case NORTH:
+			if (tile_map[player->x][player->y - 1].walkable)
+			{
+				player->y -= 1;
+			}
+			else if (tile_map[player->x][player->y - 1].type == DOOR)
+			{
+				//tile_map[player->x][player->y - 1].walkable = true;//Maybe remove?
+			}
+			break;
+		case WEST:
+			if (tile_map[player->x - 1][player->y].walkable)
+			{
+				player->x -= 1;
+			}
+			else if (tile_map[player->x - 1][player->y].type == DOOR)
+			{
+				//tile_map[player->x - 1][player->y].walkable = true;
+			}
+			break;
+		case SOUTH:
+			if (tile_map[player->x][player->y + 1].walkable)
+			{
+				player->y += 1;
+			}
+			else if (tile_map[player->x][player->y + 1].type == DOOR)
+			{
+				//tile_map[player->x][player->y + 1].walkable = true;
+			}
+			break;
+		case EAST:
+			if (tile_map[player->x + 1][player->y].walkable)
+			{
+				player->x += 1;
+			}
+			else if (tile_map[player->x + 1][player->y].type == DOOR)
+			{
+				//tile_map[player->x + 1][player->y].walkable = true;
+			}
+			break;
+
+			break;
+		default:
+			break;
+		}
 	}
 }
 
@@ -223,6 +254,9 @@ void HandleInput(ENetPeer * peer, std::string name)
 		std::string str;
 
 		char input = wgetch(win_input);
+		if (input != ERR)
+		{
+		}
 		switch (input)
 		{
 		case KEY_RESIZE:
@@ -231,23 +265,23 @@ void HandleInput(ENetPeer * peer, std::string name)
 			break;
 
 		case 'w':
-			SendMessageToPeer(peer, &MovementP(name, NORTH));
-			MovementPrediction(name, NORTH);
+			SendMessageToPeer(peer, &MovementP(name, NORTH), client_packet_sequence);
+			MovementPrediction(NORTH);
 			break;
 
 		case 'a':
-			SendMessageToPeer(peer, &MovementP(name, WEST));
-			MovementPrediction(name, WEST);
+			SendMessageToPeer(peer, &MovementP(name, WEST), client_packet_sequence);
+			MovementPrediction(WEST);
 			break;
 
 		case 's':
-			SendMessageToPeer(peer, &MovementP(name, SOUTH));
-			MovementPrediction(name, SOUTH);
+			SendMessageToPeer(peer, &MovementP(name, SOUTH), client_packet_sequence);
+			MovementPrediction(SOUTH);
 			break;
 
 		case 'd':
-			SendMessageToPeer(peer, &MovementP(name, EAST));
-			MovementPrediction(name, EAST);
+			SendMessageToPeer(peer, &MovementP(name, EAST), client_packet_sequence);
+			MovementPrediction(EAST);
 			break;
 
 		case 'l':
@@ -257,23 +291,23 @@ void HandleInput(ENetPeer * peer, std::string name)
 			switch (input)
 			{
 			case 'w':
-				SendMessageToPeer(peer, &LookP(name, NORTH));
+				SendMessageToPeer(peer, &LookP(name, NORTH), client_packet_sequence);
 				break;
 
 			case 'a':
-				SendMessageToPeer(peer, &LookP(name, WEST));
+				SendMessageToPeer(peer, &LookP(name, WEST), client_packet_sequence);
 				break;
 
 			case 's':
-				SendMessageToPeer(peer, &LookP(name, SOUTH));
+				SendMessageToPeer(peer, &LookP(name, SOUTH), client_packet_sequence);
 				break;
 
 			case 'd':
-				SendMessageToPeer(peer, &LookP(name, EAST));
+				SendMessageToPeer(peer, &LookP(name, EAST), client_packet_sequence);
 				break;
 
 			case 'l':
-				SendMessageToPeer(peer, &LookP(name, BELOW));
+				SendMessageToPeer(peer, &LookP(name, BELOW), client_packet_sequence);
 				break;
 			}
 			break;
@@ -300,7 +334,8 @@ void HandleInput(ENetPeer * peer, std::string name)
 		case 10:
 			buffer[index] = '\0';
 			index++;
-			SendMessageToPeer(peer, &MessageP(name, buffer));
+			SendMessageToPeer(peer, &MessageP(name, buffer), client_packet_sequence);
+			client_packet_sequence++;
 			typing = false;
 			wprintw(win_input, "\n");
 			wprintw(win_chat, "%s: %s\n", name.c_str(), buffer);
@@ -328,6 +363,8 @@ void HandleInput(ENetPeer * peer, std::string name)
 		}
 	}
 }
+
+
 
 void ClientThread(int id, ENetHost* client, ENetPeer* peer, bool* running)
 {
@@ -362,7 +399,8 @@ void ClientThread(int id, ENetHost* client, ENetPeer* peer, bool* running)
 	wgetstr(win_input, name);
 	noecho();
 
-	SendMessageToPeer(peer, &JoinP(name));
+	SendMessageToPeer(peer, &JoinP(name), client_packet_sequence);
+	client_packet_sequence++;
 
 	while (running)
 	{
@@ -398,6 +436,7 @@ void ClientThread(int id, ENetHost* client, ENetPeer* peer, bool* running)
 			offset_y = MAP_SIZE_Y - MAP_WIN_SIZE_Y;
 		}
 
+
 		PrintMap(tile_map, offset_x, offset_y);
 		PrintPlayers(players, offset_x, offset_y, name);
 
@@ -414,6 +453,11 @@ void ClientThread(int id, ENetHost* client, ENetPeer* peer, bool* running)
 				wprintw(win_system, "Someone is trying to connect to a client?");
 				break;
 			case ENET_EVENT_TYPE_RECEIVE:
+
+				server_packet_sequence = ((Packet*)(event.packet->data))->sequence;
+				wprintw(win_system, "[%u]", server_packet_sequence);
+
+
 				switch (((Packet*)(event.packet->data))->type)
 				{
 				case CHAT:
@@ -446,6 +490,7 @@ void ClientThread(int id, ENetHost* client, ENetPeer* peer, bool* running)
 					{
 						players[i] = players_pack->players[i];
 					}
+					PlayerReconciliation(name);
 					break;
 
 				default:

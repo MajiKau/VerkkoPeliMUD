@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include <enet/enet.h>
 #include <vector>
+#include <map>
 #include <time.h>
 
 #include "game_structs.h"
@@ -356,7 +357,7 @@ void DisconnectPeer(ENetPeer* peer, ENetHost* client)
 }
 
 int num_of_connected_clients = 0;
-std::set<ENetPeer*> connected_peers;
+std::map<ENetPeer*,unsigned int> connected_peers;
 
 /*Packet* pack = new Packet;
 MessagePacket* msg_pack = new MessagePacket;
@@ -372,6 +373,7 @@ void HandleEvent(ENetEvent event, ENetHost* server)
 	std::string name = "Client:" + std::to_string(num_of_connected_clients);
 	std::string message = "";
 	ENetPeer* peer = event.peer;
+	unsigned int sequence = 0;
 
 	switch (event.type)
 	{
@@ -381,15 +383,33 @@ void HandleEvent(ENetEvent event, ENetHost* server)
 			event.peer->address.port);
 		/* Store any relevant client information here. */
 		event.peer->data = (void*)name.c_str();
-		connected_peers.insert(event.peer);
+		connected_peers.insert({ event.peer,0 });
 		num_of_connected_clients++;
 		break;
 	case ENET_EVENT_TYPE_RECEIVE:
 	{
 
+		Packet* pack = (Packet*)event.packet->data;
+
+		wprintw(win_system, "A packet[%u] of length %u was received from %s on channel %u.\n",
+			pack->sequence,
+			(unsigned int)event.packet->dataLength,
+			pack->sender,
+			event.channelID);
+
+		sequence = pack->sequence;
+
+		for (auto&& c_peer : connected_peers)
+		{
+			if (c_peer.first == event.peer)
+			{
+				c_peer.second = sequence;
+			}
+		}
+
 		switch (((Packet*)(event.packet->data))->type)
 		{
-
+			
 		case CHAT:
 		{
 			MessagePacket* msg_pack = new MessagePacket();
@@ -397,14 +417,16 @@ void HandleEvent(ENetEvent event, ENetHost* server)
 
 			for each (auto c_peer in connected_peers)
 			{
-				if (c_peer == event.peer)
+				if (c_peer.first == event.peer)
+				{
 					continue;
+				}
 
 #ifdef LAG_ENABLED
-				std::function<void()> func = [c_peer, msg_pack]() { SendMessageToPeer(c_peer, msg_pack); };
+				std::function<void()> func = [c_peer, msg_pack]() { SendMessageToPeer(c_peer.first, msg_pack, c_peer.second); };
 				DelayedFunction(func, 0.5f);
 #else
-				SendMessageToPeer(peer, msg_pack);
+				SendMessageToPeer(peer.first, msg_pack, c_peer.second);
 #endif
 
 			}
@@ -422,10 +444,10 @@ void HandleEvent(ENetEvent event, ENetHost* server)
 			if (message != "")
 			{
 #ifdef LAG_ENABLED
-				std::function<void()> func = [peer, message]() { SendMessageToPeer(peer, &MessageP("[Movement]", message)); };
+				std::function<void()> func = [peer, message, sequence]() { SendMessageToPeer(peer, &MessageP("[Movement]", message), sequence); };
 				DelayedFunction(func, 0.5f);
 #else
-				SendMessageToPeer(event.peer, &MessageP("[Movement]", message));
+				SendMessageToPeer(event.peer, &MessageP("[Movement]", message), sequence);
 #endif
 
 			}
@@ -440,10 +462,10 @@ void HandleEvent(ENetEvent event, ENetHost* server)
 			if (message != "")
 			{
 #ifdef LAG_ENABLED
-				std::function<void()> func = [peer, message]() { SendMessageToPeer(peer, &MessageP("[Look]", message)); };
+				std::function<void()> func = [peer, message, sequence]() { SendMessageToPeer(peer, &MessageP("[Look]", message), sequence); };
 				DelayedFunction(func, 0.5f);
 #else
-				SendMessageToPeer(event.peer, &MessageP("[Look]", message));
+				SendMessageToPeer(event.peer, &MessageP("[Look]", message), sequence);
 #endif
 			}
 			wprintw(win_system, "[%d]", look_pack->dir);
@@ -463,10 +485,10 @@ void HandleEvent(ENetEvent event, ENetHost* server)
 			MapPacket* map_pack = new MapPacket();
 			*map_pack = MapP("", tile_map);
 #ifdef LAG_ENABLED
-				std::function<void()> func = [peer, map_pack]() { SendMessageToPeer(peer, map_pack); };
+				std::function<void()> func = [peer, map_pack, sequence]() { SendMessageToPeer(peer, map_pack, sequence); };
 				DelayedFunction(func, 0.5f);
 #else
-			SendMessageToPeer(event.peer, map_pack);
+			SendMessageToPeer(event.peer, map_pack, sequence);
 #endif
 			break;
 		}
@@ -478,12 +500,6 @@ void HandleEvent(ENetEvent event, ENetHost* server)
 
 		}
 
-		Packet* pack = (Packet*)event.packet->data;
-
-		wprintw(win_system, "A packet of length %u was received from %s on channel %u.\n",
-			(unsigned int)event.packet->dataLength,
-			pack->sender,
-			event.channelID);
 
 		/* Clean up the packet now that we're done using it. */
 		enet_packet_destroy(event.packet);
@@ -556,10 +572,10 @@ void ServerThread(int id, ENetHost* server, bool* running)
 				*players_pack = PlayersP("", players);
 
 #ifdef LAG_ENABLED
-				std::function<void()> func = [c_peer, players_pack]() { SendMessageToPeer(c_peer, players_pack); };
+				std::function<void()> func = [c_peer, players_pack]() { SendMessageToPeer(c_peer.first, players_pack, c_peer.second); };
 				DelayedFunction(func, 0.5f);
 #else
-				SendMessageToPeer(peer, &players_pack);
+				SendMessageToPeer(c_peer.first, &players_pack, c_peer.second);
 #endif
 
 			}
