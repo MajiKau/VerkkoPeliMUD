@@ -8,7 +8,7 @@
 #include "file_reader.h"
 #include "delayfunc.h"
 
-#define LAG_ENABLED
+#define LAG_ENABLED_0
 #define LAG_AMOUNT 0.040
 
 int spawnpoint_x = 1;
@@ -427,7 +427,7 @@ void HandleEvent(ENetEvent event, ENetHost* server)
 				std::function<void()> func = [c_peer, msg_pack]() { SendMessageToPeer(c_peer.first, msg_pack, c_peer.second); };
 				DelayedFunction(func, LAG_AMOUNT);
 #else
-				SendMessageToPeer(peer.first, msg_pack, c_peer.second);
+				SendMessageToPeer(c_peer.first, msg_pack, c_peer.second);
 #endif
 
 			}
@@ -576,7 +576,7 @@ void ServerThread(int id, ENetHost* server, bool* running)
 				std::function<void()> func = [c_peer, players_pack]() { SendMessageToPeer(c_peer.first, players_pack, c_peer.second); };
 				DelayedFunction(func, LAG_AMOUNT);
 #else
-				SendMessageToPeer(c_peer.first, &players_pack, c_peer.second);
+				SendMessageToPeer(c_peer.first, players_pack, c_peer.second);
 #endif
 
 			}
