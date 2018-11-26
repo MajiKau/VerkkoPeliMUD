@@ -9,6 +9,7 @@
 #include "delayfunc.h"
 
 #define LAG_ENABLED
+#define LAG_AMOUNT 0.040
 
 int spawnpoint_x = 1;
 int spawnpoint_y = 1;
@@ -424,7 +425,7 @@ void HandleEvent(ENetEvent event, ENetHost* server)
 
 #ifdef LAG_ENABLED
 				std::function<void()> func = [c_peer, msg_pack]() { SendMessageToPeer(c_peer.first, msg_pack, c_peer.second); };
-				DelayedFunction(func, 0.5f);
+				DelayedFunction(func, LAG_AMOUNT);
 #else
 				SendMessageToPeer(peer.first, msg_pack, c_peer.second);
 #endif
@@ -445,7 +446,7 @@ void HandleEvent(ENetEvent event, ENetHost* server)
 			{
 #ifdef LAG_ENABLED
 				std::function<void()> func = [peer, message, sequence]() { SendMessageToPeer(peer, &MessageP("[Movement]", message), sequence); };
-				DelayedFunction(func, 0.5f);
+				DelayedFunction(func, LAG_AMOUNT);
 #else
 				SendMessageToPeer(event.peer, &MessageP("[Movement]", message), sequence);
 #endif
@@ -463,7 +464,7 @@ void HandleEvent(ENetEvent event, ENetHost* server)
 			{
 #ifdef LAG_ENABLED
 				std::function<void()> func = [peer, message, sequence]() { SendMessageToPeer(peer, &MessageP("[Look]", message), sequence); };
-				DelayedFunction(func, 0.5f);
+				DelayedFunction(func, LAG_AMOUNT);
 #else
 				SendMessageToPeer(event.peer, &MessageP("[Look]", message), sequence);
 #endif
@@ -486,7 +487,7 @@ void HandleEvent(ENetEvent event, ENetHost* server)
 			*map_pack = MapP("", tile_map);
 #ifdef LAG_ENABLED
 				std::function<void()> func = [peer, map_pack, sequence]() { SendMessageToPeer(peer, map_pack, sequence); };
-				DelayedFunction(func, 0.5f);
+				DelayedFunction(func, LAG_AMOUNT);
 #else
 			SendMessageToPeer(event.peer, map_pack, sequence);
 #endif
@@ -573,7 +574,7 @@ void ServerThread(int id, ENetHost* server, bool* running)
 
 #ifdef LAG_ENABLED
 				std::function<void()> func = [c_peer, players_pack]() { SendMessageToPeer(c_peer.first, players_pack, c_peer.second); };
-				DelayedFunction(func, 0.5f);
+				DelayedFunction(func, LAG_AMOUNT);
 #else
 				SendMessageToPeer(c_peer.first, &players_pack, c_peer.second);
 #endif
@@ -589,7 +590,7 @@ void ServerThread(int id, ENetHost* server, bool* running)
 
 #ifdef LAG_ENABLED
 			std::function<void()> func = [event, server]() { HandleEvent(event, server); };
-			DelayedFunction(func, 0.5f);
+			DelayedFunction(func, LAG_AMOUNT);
 #else
 			HandleEvent(event, server);
 #endif

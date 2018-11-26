@@ -455,7 +455,7 @@ void ClientThread(int id, ENetHost* client, ENetPeer* peer, bool* running)
 			case ENET_EVENT_TYPE_RECEIVE:
 
 				server_packet_sequence = ((Packet*)(event.packet->data))->sequence;
-				wprintw(win_system, "[%u]", server_packet_sequence);
+				//wprintw(win_system, "[%u]", server_packet_sequence);
 
 
 				switch (((Packet*)(event.packet->data))->type)
