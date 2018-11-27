@@ -157,7 +157,6 @@ void MovementPrediction(Direction direction)
 
 void PlayerReconciliation(std::string name)
 {
-	wprintw(win_system, "[S:%u,C:%u]\n", server_packet_sequence, client_packet_sequence);
 
 	if (server_packet_sequence == client_packet_sequence)
 	{
@@ -175,6 +174,10 @@ void PlayerReconciliation(std::string name)
 			}
 		}
 	}
+	/*for (int i = 0; i < MAX_PLAYERS; i++)
+	{
+		players_copy[i] = players[i];
+	}*/
 
 
 	Player* player = NULL;
@@ -183,14 +186,14 @@ void PlayerReconciliation(std::string name)
 		std::string pl_name(players[i].name);
 		if (pl_name == name)
 		{
-			player = &players[i];
+			players_copy[i] = players[i];
+			player = &players_copy[i];
 		}
 	}
 	if (player == NULL)
 	{
 		return;
 	}
-
 
 
 	for (auto input : inputs)
@@ -417,11 +420,13 @@ void ClientThread(int id, ENetHost* client, ENetPeer* peer, bool* running)
 	{
 		HandleInput(peer, name);
 		//wprintw(win_system, "-W-");
+		PlayerReconciliation(name);
+
 		int pos_x = 0;
 		int pos_y = 0;
 		int offset_x = 0;
 		int offset_y = 0;
-		for each (auto player in players)
+		for each (auto player in players_copy)
 		{
 			if (strncmp(player.name, name, 20) == 0)
 			{
@@ -447,8 +452,9 @@ void ClientThread(int id, ENetHost* client, ENetPeer* peer, bool* running)
 			offset_y = MAP_SIZE_Y - MAP_WIN_SIZE_Y;
 		}
 
+
 		PrintMap(tile_map, offset_x, offset_y);
-		PrintPlayers(players, offset_x, offset_y, name);
+		PrintPlayers(players_copy, offset_x, offset_y, name);
 
 		UpdateWindows();
 
@@ -465,6 +471,7 @@ void ClientThread(int id, ENetHost* client, ENetPeer* peer, bool* running)
 			case ENET_EVENT_TYPE_RECEIVE:
 
 				server_packet_sequence = ((Packet*)(event.packet->data))->sequence;
+				wprintw(win_system, "[S:%u,C:%u]\n", server_packet_sequence, client_packet_sequence);
 				//wprintw(win_system, "[%u]", server_packet_sequence);
 
 
@@ -499,8 +506,8 @@ void ClientThread(int id, ENetHost* client, ENetPeer* peer, bool* running)
 					for (int i = 0; i < MAX_PLAYERS; i++)
 					{
 						players[i] = players_pack->players[i];
+						players_copy[i] = players[i];
 					}
-					PlayerReconciliation(name);
 					break;
 
 				default:

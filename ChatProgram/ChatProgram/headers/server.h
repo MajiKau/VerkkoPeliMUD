@@ -9,7 +9,7 @@
 #include "delayfunc.h"
 
 #define LAG_ENABLED 1
-#define LAG_AMOUNT 0.440
+#define LAG_AMOUNT 0.140
 
 int spawnpoint_x = 1;
 int spawnpoint_y = 1;
@@ -523,6 +523,8 @@ void HandleEvent(ENetEvent event, ENetHost* server)
 }
 
 
+float send_players_cooldown = 0.0f;
+
 void ServerThread(int id, ENetHost* server, bool* running)
 {
 	//nodelay(win_input, true);
@@ -565,23 +567,30 @@ void ServerThread(int id, ENetHost* server, bool* running)
 		PrintAnimals(animals, 0, 0);
 		UpdateWindows();
 
-		for each (auto c_peer in connected_peers)
+		if (send_players_cooldown < 0.0f)
 		{
-			if (num_of_players != 0)
+			send_players_cooldown = 0.1f;
+			for each (auto c_peer in connected_peers)
 			{
-				PlayersPacket* players_pack = new PlayersPacket();
-				*players_pack = PlayersP("", players);
+				if (num_of_players != 0)
+				{
+					PlayersPacket* players_pack = new PlayersPacket();
+					*players_pack = PlayersP("", players);
 
 #if LAG_ENABLED
-				std::function<void()> func = [c_peer, players_pack]() { SendMessageToPeer(c_peer.first, players_pack, c_peer.second); };
-				DelayedFunction(func, LAG_AMOUNT);
+					std::function<void()> func = [c_peer, players_pack]() { SendMessageToPeer(c_peer.first, players_pack, c_peer.second); };
+					DelayedFunction(func, LAG_AMOUNT);
 #else
-				SendMessageToPeer(c_peer.first, players_pack, c_peer.second);
+					SendMessageToPeer(c_peer.first, players_pack, c_peer.second);
 #endif
 
+				}
 			}
 		}
-
+		else
+		{
+			send_players_cooldown -= deltatime;
+		}
 		int enet_int = enet_host_service(server, &event, 0);
 		
 		/* Wait up to 0 milliseconds for an event. */

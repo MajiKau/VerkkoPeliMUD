@@ -76,5 +76,6 @@ std::vector<std::vector<Tile>> tile_map(MAP_SIZE_X, std::vector<Tile>(MAP_SIZE_Y
 
 int num_of_players = 0;
 Player players[MAX_PLAYERS];
+Player players_copy[MAX_PLAYERS];
 
 std::vector<Animal> animals;
