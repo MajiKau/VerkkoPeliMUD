@@ -8,7 +8,8 @@ enum MessageType
 	COMMAND,
 	JOIN,
 	MAP,
-	PLAYERS
+	PLAYERS,
+	TILE
 };
 
 enum Direction
@@ -58,16 +59,19 @@ struct MapPacket :Packet
 	MapPacket()
 	{
 		map = new Tile[MAP_SIZE_X*MAP_SIZE_Y];
-		//map = std::vector<std::vector<Tile>>(MAP_SIZE_X, std::vector<Tile>(MAP_SIZE_Y, Tile()));
 	}
-	//std::vector<std::vector<Tile>> map;
-	//Tile map[MAP_SIZE_X][MAP_SIZE_Y];
 	Tile* map;
 };
 
 struct PlayersPacket :Packet
 {
 	Player players[MAX_PLAYERS];
+};
+
+struct TileUpdatePacket :Packet
+{
+	int x, y;
+	Tile tile;
 };
 
 JoinPacket JoinP(std::string name)
@@ -138,8 +142,6 @@ MapPacket MapP(std::string name, std::vector<std::vector<Tile>> map)
 	MapPacket pack;
 	pack.type = MAP;
 
-	
-
 	memcpy(pack.sender, name.c_str(), 20);
 	for (int x = 0; x < MAP_SIZE_X; x++)
 	{
@@ -148,7 +150,7 @@ MapPacket MapP(std::string name, std::vector<std::vector<Tile>> map)
 			pack.map[x + y*MAP_SIZE_X] = map[x][y];
 		}
 	}
-	//pack.map = map;
+
 	return pack;
 }
 
@@ -167,33 +169,29 @@ MapPacket MapP(std::string name, Tile** map)
 		for (int y = 0; y < MAP_SIZE_Y; y++)
 		{
 			pack.map[x + y*MAP_SIZE_X] = map[x][y];
-			//pack.map[x][y] = map[x][y];
 		}
 	}
-	//pack.map = map;
+
 	return pack;
 }
 
-/*MapPacket MapP(std::string name, Tile map[MAP_SIZE_X][MAP_SIZE_Y] )
+TileUpdatePacket TileP(std::string name, int x, int y, Tile tile)
 {
 	if (name.size() > 19)
 	{
 		name.resize(19);
 	}
-	MapPacket pack;
-	pack.type = MAP;
+	TileUpdatePacket pack;
+	pack.type = TILE;
 
 	memcpy(pack.sender, name.c_str(), 20);
-	for (int x = 0; x < MAP_SIZE_X; x++)
-	{
-		for (int y = 0; y < MAP_SIZE_Y; y++)
-		{
-			pack.map[x][y] = map[x][y];
-		}
-	}
-	//pack.map = map;
+
+	pack.x = x;
+	pack.y = y;
+	pack.tile = tile;
+
 	return pack;
-}*/
+}
 
 PlayersPacket PlayersP(std::string name, Player players[MAX_PLAYERS])
 {
@@ -216,7 +214,94 @@ PlayersPacket PlayersP(std::string name, Player players[MAX_PLAYERS])
 void SendMessageToPeer(ENetPeer* peer, Packet* package, unsigned int sequence_number)
 {
 	package->sequence = sequence_number;
-	if (package->type == CHAT)
+
+	switch (package->type)
+	{
+	case CHAT:
+	{
+		char* message[sizeof(MessagePacket)];
+		memcpy(message, package, sizeof(MessagePacket));
+
+		ENetPacket * packet = enet_packet_create(message,
+			sizeof(message),
+			ENET_PACKET_FLAG_RELIABLE);
+		enet_peer_send(peer, 0, packet);
+		break;
+	}
+	case MOVEMENT:
+	{
+		char* message[sizeof(MovePacket)];
+		memcpy(message, package, sizeof(MovePacket));
+
+		ENetPacket * packet = enet_packet_create(message,
+			sizeof(message),
+			ENET_PACKET_FLAG_RELIABLE);
+		enet_peer_send(peer, 0, packet);
+		break;
+	}
+	case LOOK:
+	{
+		char* message[sizeof(LookPacket)];
+		memcpy(message, package, sizeof(LookPacket));
+
+		ENetPacket * packet = enet_packet_create(message,
+			sizeof(message),
+			ENET_PACKET_FLAG_RELIABLE);
+		enet_peer_send(peer, 0, packet);
+		break;
+	}
+	case JOIN:
+	{
+		char* message[sizeof(JoinPacket)];
+		memcpy(message, package, sizeof(JoinPacket));
+
+		ENetPacket * packet = enet_packet_create(message,
+			sizeof(message),
+			ENET_PACKET_FLAG_RELIABLE);
+		enet_peer_send(peer, 0, packet);
+		break;
+	}
+	case MAP:
+	{
+		char* message = new char[sizeof(MapPacket) + sizeof(Tile)*MAP_SIZE_X*MAP_SIZE_Y];
+		memcpy(message, package, sizeof(MapPacket));
+		memcpy(message + sizeof(MapPacket), ((MapPacket*)package)->map, sizeof(Tile)*MAP_SIZE_X*MAP_SIZE_Y);
+
+		ENetPacket * packet = enet_packet_create(message,
+			sizeof(MapPacket) + sizeof(Tile)*MAP_SIZE_X*MAP_SIZE_Y,
+			ENET_PACKET_FLAG_RELIABLE);
+		enet_peer_send(peer, 0, packet);
+		delete[] message;
+		break;
+	}
+	case PLAYERS:
+	{
+		char* message[sizeof(PlayersPacket)];
+		memcpy(message, package, sizeof(PlayersPacket));
+
+		ENetPacket * packet = enet_packet_create(message,
+			sizeof(message),
+			ENET_PACKET_FLAG_RELIABLE);
+		enet_peer_send(peer, 0, packet);
+		break;
+	}
+	case TILE:
+	{
+		char* message[sizeof(TileUpdatePacket)];
+		memcpy(message, package, sizeof(TileUpdatePacket));
+
+		ENetPacket * packet = enet_packet_create(message,
+			sizeof(message),
+			ENET_PACKET_FLAG_RELIABLE);
+		enet_peer_send(peer, 0, packet);
+		break;
+	}
+
+	default:
+		break;
+	}
+
+	/*if (package->type == CHAT)
 	{
 		char* message[sizeof(MessagePacket)];
 		memcpy(message, package, sizeof(MessagePacket));
@@ -279,6 +364,16 @@ void SendMessageToPeer(ENetPeer* peer, Packet* package, unsigned int sequence_nu
 			ENET_PACKET_FLAG_RELIABLE);
 		enet_peer_send(peer, 0, packet);
 	}
+	else if (package->type == TILE)
+	{
+		char* message[sizeof(TileUpdatePacket)];
+		memcpy(message, package, sizeof(TileUpdatePacket));
+
+		ENetPacket * packet = enet_packet_create(message,
+			sizeof(message),
+			ENET_PACKET_FLAG_RELIABLE);
+		enet_peer_send(peer, 0, packet);
+	}*/
 }
 
 

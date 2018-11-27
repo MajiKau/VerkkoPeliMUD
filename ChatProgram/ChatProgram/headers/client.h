@@ -396,14 +396,14 @@ void ClientThread(int id, ENetHost* client, ENetPeer* peer, bool* running)
 	MapPacket* map_pack;
 	PlayersPacket* players_pack;*/
 
-	Packet* pack = new Packet;
+	/*Packet* pack = new Packet;
 	MessagePacket* msg_pack = new MessagePacket;
 	LookPacket* look_pack = new LookPacket;
 	MovePacket* move_pack = new MovePacket;
 	JoinPacket* join_pack = new JoinPacket;
-	MapPacket* map_pack = new MapPacket;
-	Tile* tiles;
-	PlayersPacket* players_pack = new PlayersPacket; 
+	MapPacket* map_pack = new MapPacket;*/
+	//Tile* tiles;
+	//PlayersPacket* players_pack = new PlayersPacket; 
 
 	ENetEvent event;
 	nodelay(win_input, true);
@@ -478,7 +478,8 @@ void ClientThread(int id, ENetHost* client, ENetPeer* peer, bool* running)
 				switch (((Packet*)(event.packet->data))->type)
 				{
 				case CHAT:
-					msg_pack = (MessagePacket*)event.packet->data;
+				{
+					MessagePacket* msg_pack = (MessagePacket*)event.packet->data;
 
 					wprintw(win_chat, "%s: %s\n", msg_pack->sender, msg_pack->message);
 
@@ -488,10 +489,11 @@ void ClientThread(int id, ENetHost* client, ENetPeer* peer, bool* running)
 					}
 
 					break;
-
-				case MAP:
-					map_pack = (MapPacket*)event.packet->data;
-					tiles = (Tile*)(((char*)map_pack) + sizeof(MapPacket));
+				}
+				case MAP: 
+				{
+					MapPacket* map_pack = (MapPacket*)event.packet->data;
+					Tile* tiles = (Tile*)(((char*)map_pack) + sizeof(MapPacket));
 					for (int x = 0; x < MAP_SIZE_X; x++)
 					{
 						for (int y = 0; y < MAP_SIZE_Y; y++)
@@ -500,15 +502,22 @@ void ClientThread(int id, ENetHost* client, ENetPeer* peer, bool* running)
 						}
 					}
 					break;
-
+				}
 				case PLAYERS:
-					players_pack = (PlayersPacket*)event.packet->data;
+				{
+					PlayersPacket* players_pack = (PlayersPacket*)event.packet->data;
 					for (int i = 0; i < MAX_PLAYERS; i++)
 					{
 						players[i] = players_pack->players[i];
 						players_copy[i] = players[i];
 					}
 					break;
+				}
+				case TILE:
+				{
+					TileUpdatePacket* tile_pack = (TileUpdatePacket*)event.packet->data;
+					tile_map[tile_pack->x][tile_pack->y] = tile_pack->tile;
+				}
 
 				default:
 					break;

@@ -9,7 +9,7 @@
 #include "delayfunc.h"
 
 #define LAG_ENABLED 1
-#define LAG_AMOUNT 0.140
+#define LAG_AMOUNT 0.040
 
 int spawnpoint_x = 1;
 int spawnpoint_y = 1;
@@ -18,6 +18,9 @@ int animal_spawnpoint_x = 1;
 int animal_spawnpoint_y = 1;
 
 float deltatime = 0;
+
+int num_of_connected_clients = 0;
+std::map<ENetPeer*, unsigned int> connected_peers;
 
 void SpawnAnimals()
 {
@@ -143,6 +146,30 @@ void CreateMap()
 
 	SpawnAnimals();
 }
+
+void OpenDoor(int x, int y)
+{
+	tile_map[x][y].walkable = true;
+
+	for each (auto c_peer in connected_peers)
+	{
+		if (num_of_players != 0)
+		{
+			TileUpdatePacket* tile_pack = new TileUpdatePacket();
+			*tile_pack = TileP("", x, y, tile_map[x][y]);
+
+#if LAG_ENABLED
+			std::function<void()> func = [c_peer, tile_pack]() { SendMessageToPeer(c_peer.first, tile_pack, c_peer.second); };
+			DelayedFunction(func, LAG_AMOUNT);
+#else
+			SendMessageToPeer(c_peer.first, tile_pack, c_peer.second);
+#endif
+
+		}
+	}
+
+}
+
 std::string HandleMovement(MovePacket* packet)
 {
 	Player* player = NULL;
@@ -170,7 +197,7 @@ std::string HandleMovement(MovePacket* packet)
 		}
 		else if (tile_map[player->x][player->y - 1].type == DOOR)
 		{
-			tile_map[player->x][player->y - 1].walkable = true;
+			OpenDoor(player->x, player->y - 1);
 			message = "You opened a door.";
 		}
 		break;
@@ -181,7 +208,7 @@ std::string HandleMovement(MovePacket* packet)
 		}
 		else if (tile_map[player->x - 1][player->y].type == DOOR)
 		{
-			tile_map[player->x - 1][player->y].walkable = true;
+			OpenDoor(player->x - 1, player->y);
 			message = "You opened a door.";
 		}
 		break;
@@ -192,7 +219,7 @@ std::string HandleMovement(MovePacket* packet)
 		}
 		else if (tile_map[player->x][player->y + 1].type == DOOR)
 		{
-			tile_map[player->x][player->y + 1].walkable = true;
+			OpenDoor(player->x, player->y + 1);
 			message = "You opened a door.";
 		}
 		break;
@@ -203,7 +230,7 @@ std::string HandleMovement(MovePacket* packet)
 		}
 		else if (tile_map[player->x + 1][player->y].type == DOOR)
 		{
-			tile_map[player->x + 1][player->y].walkable = true;
+			OpenDoor(player->x + 1, player->y);
 			message = "You opened a door.";
 		}
 		break;
@@ -357,8 +384,6 @@ void DisconnectPeer(ENetPeer* peer, ENetHost* client)
 	//DO THINGS HERE
 }
 
-int num_of_connected_clients = 0;
-std::map<ENetPeer*,unsigned int> connected_peers;
 
 /*Packet* pack = new Packet;
 MessagePacket* msg_pack = new MessagePacket;
@@ -569,7 +594,7 @@ void ServerThread(int id, ENetHost* server, bool* running)
 
 		if (send_players_cooldown < 0.0f)
 		{
-			send_players_cooldown = 0.1f;
+			send_players_cooldown = 0.05f;
 			for each (auto c_peer in connected_peers)
 			{
 				if (num_of_players != 0)
