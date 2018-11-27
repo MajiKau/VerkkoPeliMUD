@@ -153,11 +153,12 @@ std::list <std::pair<unsigned int, Direction>> inputs;
 void MovementPrediction(Direction direction)
 {
 	inputs.push_back({ client_packet_sequence ,direction });
-	client_packet_sequence++;
 }
 
 void PlayerReconciliation(std::string name)
 {
+	wprintw(win_system, "[S:%u,C:%u]\n", server_packet_sequence, client_packet_sequence);
+
 	if (server_packet_sequence == client_packet_sequence)
 	{
 		return;
@@ -170,10 +171,11 @@ void PlayerReconciliation(std::string name)
 			inputs.pop_front();
 			if (inputs.size() == 0)
 			{
-				break;
+				return;
 			}
 		}
 	}
+
 
 	Player* player = NULL;
 	for (int i = 0; i < MAX_PLAYERS; i++)
@@ -265,21 +267,25 @@ void HandleInput(ENetPeer * peer, std::string name)
 			break;
 
 		case 'w':
+			client_packet_sequence++;
 			SendMessageToPeer(peer, &MovementP(name, NORTH), client_packet_sequence);
 			MovementPrediction(NORTH);
 			break;
 
 		case 'a':
+			client_packet_sequence++;
 			SendMessageToPeer(peer, &MovementP(name, WEST), client_packet_sequence);
 			MovementPrediction(WEST);
 			break;
 
 		case 's':
+			client_packet_sequence++;
 			SendMessageToPeer(peer, &MovementP(name, SOUTH), client_packet_sequence);
 			MovementPrediction(SOUTH);
 			break;
 
 		case 'd':
+			client_packet_sequence++;
 			SendMessageToPeer(peer, &MovementP(name, EAST), client_packet_sequence);
 			MovementPrediction(EAST);
 			break;
@@ -291,22 +297,27 @@ void HandleInput(ENetPeer * peer, std::string name)
 			switch (input)
 			{
 			case 'w':
+				client_packet_sequence++;
 				SendMessageToPeer(peer, &LookP(name, NORTH), client_packet_sequence);
 				break;
 
 			case 'a':
+				client_packet_sequence++;
 				SendMessageToPeer(peer, &LookP(name, WEST), client_packet_sequence);
 				break;
 
 			case 's':
+				client_packet_sequence++;
 				SendMessageToPeer(peer, &LookP(name, SOUTH), client_packet_sequence);
 				break;
 
 			case 'd':
+				client_packet_sequence++;
 				SendMessageToPeer(peer, &LookP(name, EAST), client_packet_sequence);
 				break;
 
 			case 'l':
+				client_packet_sequence++;
 				SendMessageToPeer(peer, &LookP(name, BELOW), client_packet_sequence);
 				break;
 			}
@@ -334,8 +345,8 @@ void HandleInput(ENetPeer * peer, std::string name)
 		case 10:
 			buffer[index] = '\0';
 			index++;
-			SendMessageToPeer(peer, &MessageP(name, buffer), client_packet_sequence);
 			client_packet_sequence++;
+			SendMessageToPeer(peer, &MessageP(name, buffer), client_packet_sequence);
 			typing = false;
 			wprintw(win_input, "\n");
 			wprintw(win_chat, "%s: %s\n", name.c_str(), buffer);
@@ -399,8 +410,8 @@ void ClientThread(int id, ENetHost* client, ENetPeer* peer, bool* running)
 	wgetstr(win_input, name);
 	noecho();
 
-	SendMessageToPeer(peer, &JoinP(name), client_packet_sequence);
 	client_packet_sequence++;
+	SendMessageToPeer(peer, &JoinP(name), client_packet_sequence);
 
 	while (running)
 	{
@@ -435,7 +446,6 @@ void ClientThread(int id, ENetHost* client, ENetPeer* peer, bool* running)
 		{
 			offset_y = MAP_SIZE_Y - MAP_WIN_SIZE_Y;
 		}
-
 
 		PrintMap(tile_map, offset_x, offset_y);
 		PrintPlayers(players, offset_x, offset_y, name);

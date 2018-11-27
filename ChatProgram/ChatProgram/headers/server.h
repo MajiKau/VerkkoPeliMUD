@@ -8,8 +8,8 @@
 #include "file_reader.h"
 #include "delayfunc.h"
 
-#define LAG_ENABLED_0
-#define LAG_AMOUNT 0.040
+#define LAG_ENABLED 1
+#define LAG_AMOUNT 0.440
 
 int spawnpoint_x = 1;
 int spawnpoint_y = 1;
@@ -423,7 +423,7 @@ void HandleEvent(ENetEvent event, ENetHost* server)
 					continue;
 				}
 
-#ifdef LAG_ENABLED
+#if LAG_ENABLED
 				std::function<void()> func = [c_peer, msg_pack]() { SendMessageToPeer(c_peer.first, msg_pack, c_peer.second); };
 				DelayedFunction(func, LAG_AMOUNT);
 #else
@@ -444,11 +444,11 @@ void HandleEvent(ENetEvent event, ENetHost* server)
 			message = HandleMovement(move_pack);
 			if (message != "")
 			{
-#ifdef LAG_ENABLED
+#if LAG_ENABLED
 				std::function<void()> func = [peer, message, sequence]() { SendMessageToPeer(peer, &MessageP("[Movement]", message), sequence); };
 				DelayedFunction(func, LAG_AMOUNT);
 #else
-				SendMessageToPeer(event.peer, &MessageP("[Movement]", message), sequence);
+				SendMessageToPeer(peer, &MessageP("[Movement]", message), sequence);
 #endif
 
 			}
@@ -462,11 +462,11 @@ void HandleEvent(ENetEvent event, ENetHost* server)
 			message = HandleLook(look_pack);
 			if (message != "")
 			{
-#ifdef LAG_ENABLED
+#if LAG_ENABLED
 				std::function<void()> func = [peer, message, sequence]() { SendMessageToPeer(peer, &MessageP("[Look]", message), sequence); };
 				DelayedFunction(func, LAG_AMOUNT);
 #else
-				SendMessageToPeer(event.peer, &MessageP("[Look]", message), sequence);
+				SendMessageToPeer(peer, &MessageP("[Look]", message), sequence);
 #endif
 			}
 			wprintw(win_system, "[%d]", look_pack->dir);
@@ -485,11 +485,11 @@ void HandleEvent(ENetEvent event, ENetHost* server)
 			num_of_players++;
 			MapPacket* map_pack = new MapPacket();
 			*map_pack = MapP("", tile_map);
-#ifdef LAG_ENABLED
+#if LAG_ENABLED
 				std::function<void()> func = [peer, map_pack, sequence]() { SendMessageToPeer(peer, map_pack, sequence); };
 				DelayedFunction(func, LAG_AMOUNT);
 #else
-			SendMessageToPeer(event.peer, map_pack, sequence);
+			SendMessageToPeer(peer, map_pack, sequence);
 #endif
 			break;
 		}
@@ -555,7 +555,7 @@ void ServerThread(int id, ENetHost* server, bool* running)
 
 		UpdateAnimals(deltatime);
 
-#ifdef LAG_ENABLED
+#if LAG_ENABLED
 		DelayedFunctionUpdate(deltatime);
 #endif // LAG_ENABLED
 
@@ -572,7 +572,7 @@ void ServerThread(int id, ENetHost* server, bool* running)
 				PlayersPacket* players_pack = new PlayersPacket();
 				*players_pack = PlayersP("", players);
 
-#ifdef LAG_ENABLED
+#if LAG_ENABLED
 				std::function<void()> func = [c_peer, players_pack]() { SendMessageToPeer(c_peer.first, players_pack, c_peer.second); };
 				DelayedFunction(func, LAG_AMOUNT);
 #else
@@ -588,7 +588,7 @@ void ServerThread(int id, ENetHost* server, bool* running)
 		if (enet_int > 0)
 		{
 
-#ifdef LAG_ENABLED
+#if LAG_ENABLED
 			std::function<void()> func = [event, server]() { HandleEvent(event, server); };
 			DelayedFunction(func, LAG_AMOUNT);
 #else
