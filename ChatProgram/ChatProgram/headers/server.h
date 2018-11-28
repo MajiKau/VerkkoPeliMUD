@@ -11,6 +11,8 @@
 #define LAG_ENABLED 1
 #define LAG_AMOUNT 0.040
 
+#define SERVER_SEND_RATE 0.05f
+
 int spawnpoint_x = 1;
 int spawnpoint_y = 1;
 
@@ -21,6 +23,8 @@ float deltatime = 0;
 
 int num_of_connected_clients = 0;
 std::map<ENetPeer*, unsigned int> connected_peers;
+
+float send_players_cooldown = 0.0f;
 
 void SpawnAnimals()
 {
@@ -138,6 +142,9 @@ void CreateMap()
 				animal_spawnpoint_x = x;
 				animal_spawnpoint_y = y;
 				break;
+			case 'X':
+				tile_map[x][y].type = HOLE;
+				tile_map[x][y].walkable = false;
 			default:
 				break;
 			}
@@ -147,10 +154,9 @@ void CreateMap()
 	SpawnAnimals();
 }
 
-void OpenDoor(int x, int y)
+void UpdateTile(int x, int y, Tile tile)
 {
-	tile_map[x][y].walkable = true;
-
+	tile_map[x][y] = tile;
 	for each (auto c_peer in connected_peers)
 	{
 		if (num_of_players != 0)
@@ -164,10 +170,16 @@ void OpenDoor(int x, int y)
 #else
 			SendMessageToPeer(c_peer.first, tile_pack, c_peer.second);
 #endif
-
 		}
 	}
+}
 
+void OpenDoor(int x, int y)
+{
+	Tile tile = tile_map[x][y];
+	tile.walkable = true;
+
+	UpdateTile(x, y, tile);
 }
 
 std::string HandleMovement(MovePacket* packet)
@@ -188,7 +200,7 @@ std::string HandleMovement(MovePacket* packet)
 		return "";
 	}
 
-	switch (packet->dir)
+	switch (packet->direction)
 	{	
 	case NORTH:
 		if (tile_map[player->x][player->y - 1].walkable)
@@ -262,7 +274,7 @@ std::string HandleLook(LookPacket* packet)
 
 	tiletype tile = GROUND;
 
-	switch (packet->dir)
+	switch (packet->direction)
 	{
 	case NORTH:
 		tile = tile_map[player->x][player->y - 1].type;			
@@ -314,6 +326,65 @@ std::string HandleLook(LookPacket* packet)
 		message = "You don't know what that is.";
 		break;
 
+	}
+
+	return message;
+}
+
+std::string HandleDig(DigPacket* packet)
+{
+	Player* player = NULL;
+	std::string pa_name(packet->sender);
+	std::string message = "";
+	for (int i = 0; i < MAX_PLAYERS; i++)
+	{
+		std::string pl_name(players[i].name);
+		if (pl_name == pa_name)
+		{
+			player = &players[i];
+		}
+	}
+	if (player == NULL)
+	{
+		return "";
+	}
+
+	int x;
+	int y;
+
+	switch (packet->direction)
+	{
+	case NORTH:
+		x = player->x;
+		y = player->y - 1;
+		break;
+
+	case WEST:
+		x = player->x - 1;
+		y = player->y;
+		break;
+
+	case SOUTH:
+		x = player->x;
+		y = player->y + 1;
+		break;
+
+	case EAST:
+		x = player->x + 1;
+		y = player->y;
+		break;
+
+	default:
+		break;
+	}
+
+	Tile tile = tile_map[x][y];
+	if (tile.type == GRASS)
+	{
+		tile.type = HOLE;
+		tile.walkable = false;
+		UpdateTile(x, y, tile);
+		message = "You dug a hole!";
 	}
 
 	return message;
@@ -477,7 +548,7 @@ void HandleEvent(ENetEvent event, ENetHost* server)
 #endif
 
 			}
-			wprintw(win_system, "[%d]", move_pack->dir);
+			wprintw(win_system, "[%d]", move_pack->direction);
 			break;
 		}
 
@@ -494,7 +565,7 @@ void HandleEvent(ENetEvent event, ENetHost* server)
 				SendMessageToPeer(peer, &MessageP("[Look]", message), sequence);
 #endif
 			}
-			wprintw(win_system, "[%d]", look_pack->dir);
+			wprintw(win_system, "[%d]", look_pack->direction);
 			break;
 		}
 
@@ -519,8 +590,26 @@ void HandleEvent(ENetEvent event, ENetHost* server)
 			break;
 		}
 
+		case DIG:
+		{
+			DigPacket* look_pack = (DigPacket*)event.packet->data;
+			message = HandleDig(look_pack);
+			if (message != "")
+			{
+#if LAG_ENABLED
+				std::function<void()> func = [peer, message, sequence]() { SendMessageToPeer(peer, &MessageP("[Look]", message), sequence); };
+				DelayedFunction(func, LAG_AMOUNT);
+#else
+				SendMessageToPeer(peer, &MessageP("[Look]", message), sequence);
+#endif
+			}
+			wprintw(win_system, "[%d]", look_pack->direction);
+			break;
+		}
+
 		default:
 		{
+			wprintw(win_system, "Packet of unknown type received.\n");
 			break;
 		}
 
@@ -548,7 +637,6 @@ void HandleEvent(ENetEvent event, ENetHost* server)
 }
 
 
-float send_players_cooldown = 0.0f;
 
 void ServerThread(int id, ENetHost* server, bool* running)
 {
@@ -594,7 +682,7 @@ void ServerThread(int id, ENetHost* server, bool* running)
 
 		if (send_players_cooldown < 0.0f)
 		{
-			send_players_cooldown = 0.05f;
+			send_players_cooldown = SERVER_SEND_RATE;
 			for each (auto c_peer in connected_peers)
 			{
 				if (num_of_players != 0)

@@ -28,6 +28,7 @@ std::vector<WINDOW*> window_borders;
 #define TERM_COLOR_SPAWN 9
 #define TERM_COLOR_DOORCLOSED 10
 #define TERM_COLOR_DOOROPEN 11
+#define TERM_COLOR_HOLE 12
 
 #define MAP_WIN_SIZE_X 93
 #define MAP_WIN_SIZE_Y 54
@@ -115,6 +116,11 @@ void PrintMap(std::vector<std::vector<Tile>> &map, int offset_x, int offset_y)
 
 				}
 				break;
+			case HOLE:
+				wattron(win_map, COLOR_PAIR(TERM_COLOR_HOLE));
+				mvwaddch(win_map, y, x, 178);
+				wattroff(win_map, COLOR_PAIR(TERM_COLOR_HOLE));
+				break;
 			default:
 				wattron(win_map, COLOR_PAIR(TERM_COLOR_PLAYER));
 				mvwaddch(win_map, y, x, 'O');
@@ -124,315 +130,6 @@ void PrintMap(std::vector<std::vector<Tile>> &map, int offset_x, int offset_y)
 		}
 	}
 }
-
-/*void PrintMap(Tile** map, int offset_x, int offset_y)
-{
-	for (int x = 0; x < MAP_WIN_SIZE_X && x < MAP_SIZE_X; x++)
-	{
-		if (x >= MAP_SIZE_X) break;
-
-		for (int y = 0; y < MAP_WIN_SIZE_Y && y < MAP_SIZE_Y; y++)
-		{
-			if (y >= MAP_SIZE_Y) break;
-
-			switch (map[x + offset_x][y + offset_y].type)
-			{
-			case GROUND:
-				wattron(win_map, COLOR_PAIR(TERM_COLOR_GRASS));
-				mvwaddch(win_map, y, x, 177);
-				wattroff(win_map, COLOR_PAIR(TERM_COLOR_GRASS));
-				break;
-			case GRASS:
-				wattron(win_map, COLOR_PAIR(TERM_COLOR_GRASS));
-				mvwaddch(win_map, y, x, 176);
-				wattroff(win_map, COLOR_PAIR(TERM_COLOR_GRASS));
-				break;
-			case SAND:
-				wattron(win_map, COLOR_PAIR(TERM_COLOR_SAND));
-				mvwaddch(win_map, y, x, 176);
-				wattroff(win_map, COLOR_PAIR(TERM_COLOR_SAND));
-				break;
-			case WATER:
-				wattron(win_map, COLOR_PAIR(TERM_COLOR_WATER));
-				mvwaddch(win_map, y, x, 176);
-				wattroff(win_map, COLOR_PAIR(TERM_COLOR_WATER));
-				break;
-			case WALL:
-				wattron(win_map, COLOR_PAIR(TERM_COLOR_WALL));
-				mvwaddch(win_map, y, x, 177);
-				wattroff(win_map, COLOR_PAIR(TERM_COLOR_WALL));
-				break;
-			default:
-				wattron(win_map, COLOR_PAIR(TERM_COLOR_PLAYER));
-				mvwaddch(win_map, y, x, 'O');
-				wattroff(win_map, COLOR_PAIR(TERM_COLOR_PLAYER));
-				break;
-			}
-		}
-	}
-}*/
-
-/*void PrintMap(Tile map[MAP_SIZE_X][MAP_SIZE_Y], int offset_x, int offset_y)
-{
-	for (int x = 0; x < MAP_WIN_SIZE_X; x++)
-	{
-		if (x >= MAP_SIZE_X) break;
-
-		for (int y = 0; y < MAP_WIN_SIZE_Y; y++)
-		{
-			if (y >= MAP_SIZE_Y) break;
-
-			switch (map[x + offset_x][y + offset_y].type)
-			{
-			case GROUND:
-				wattron(win_map, COLOR_PAIR(TERM_COLOR_GRASS));
-				mvwaddch(win_map, y, x, 177);
-				wattroff(win_map, COLOR_PAIR(TERM_COLOR_GRASS));
-				break;
-			case GRASS:
-				wattron(win_map, COLOR_PAIR(TERM_COLOR_GRASS));
-				mvwaddch(win_map, y, x, 176);
-				wattroff(win_map, COLOR_PAIR(TERM_COLOR_GRASS));
-				break;
-			case SAND:
-				wattron(win_map, COLOR_PAIR(TERM_COLOR_SAND));
-				mvwaddch(win_map, y, x, 176);
-				wattroff(win_map, COLOR_PAIR(TERM_COLOR_SAND));
-				break;
-			case WATER:
-				wattron(win_map, COLOR_PAIR(TERM_COLOR_WATER));
-				mvwaddch(win_map, y, x, 176);
-				wattroff(win_map, COLOR_PAIR(TERM_COLOR_WATER));
-				break;
-			case WALL:
-				wattron(win_map, COLOR_PAIR(TERM_COLOR_WALL));
-				mvwaddch(win_map, y, x, 177);
-				wattroff(win_map, COLOR_PAIR(TERM_COLOR_WALL));
-				break;
-			default:
-				wattron(win_map, COLOR_PAIR(TERM_COLOR_PLAYER));
-				mvwaddch(win_map, y, x, 'O');
-				wattroff(win_map, COLOR_PAIR(TERM_COLOR_PLAYER));
-				break;
-			}
-		}
-	}
-}*/
-
-/*void PrintMap(std::vector<std::vector<Tile>> &map)
-{
-	for (int x = 0; x < MAP_WIN_SIZE_X && x < MAP_SIZE_X; x++)
-	{
-		if (x > MAP_SIZE_X) break;
-
-		for (int y = 0; y < MAP_WIN_SIZE_Y && y < MAP_SIZE_Y; y++)
-		{
-			if (y > MAP_SIZE_Y) break;
-			switch (map[x][y].type)
-			{
-			case GROUND:
-				wattron(win_map, COLOR_PAIR(TERM_COLOR_GRASS));
-				mvwaddch(win_map, y, x, 177);
-				wattroff(win_map, COLOR_PAIR(TERM_COLOR_GRASS));
-				break;
-			case GRASS:
-				wattron(win_map, COLOR_PAIR(TERM_COLOR_GRASS));
-				mvwaddch(win_map, y, x, 176);
-				wattroff(win_map, COLOR_PAIR(TERM_COLOR_GRASS));
-				break;
-			case SAND:
-				wattron(win_map, COLOR_PAIR(TERM_COLOR_SAND));
-				mvwaddch(win_map, y, x, 176);
-				wattroff(win_map, COLOR_PAIR(TERM_COLOR_SAND));
-				break;
-			case WATER:
-				wattron(win_map, COLOR_PAIR(TERM_COLOR_WATER));
-				mvwaddch(win_map, y, x, 176);
-				wattroff(win_map, COLOR_PAIR(TERM_COLOR_WATER));
-				break;
-			case WALL:
-				wattron(win_map, COLOR_PAIR(TERM_COLOR_WALL));
-				mvwaddch(win_map, y, x, 177);
-				wattroff(win_map, COLOR_PAIR(TERM_COLOR_WALL));
-				break;
-			default:
-				wattron(win_map, COLOR_PAIR(TERM_COLOR_PLAYER));
-				mvwaddch(win_map, y, x, 'O');
-				wattroff(win_map, COLOR_PAIR(TERM_COLOR_PLAYER));
-				break;
-			}
-		}
-	}
-}*/
-
-/*void PrintMap(Tile** map)
-{
-	for (int x = 0; x < MAP_WIN_SIZE_X; x++)
-	{
-		if (x > MAP_SIZE_X) break;
-
-		for (int y = 0; y < MAP_WIN_SIZE_Y; y++)
-		{
-			if (y > MAP_SIZE_Y) break;
-			switch (map[x][y].type)
-			{
-			case GROUND:
-				wattron(win_map, COLOR_PAIR(TERM_COLOR_GRASS));
-				mvwaddch(win_map, y, x, 177);
-				wattroff(win_map, COLOR_PAIR(TERM_COLOR_GRASS));
-				break;
-			case GRASS:
-				wattron(win_map, COLOR_PAIR(TERM_COLOR_GRASS));
-				mvwaddch(win_map, y, x, 176);
-				wattroff(win_map, COLOR_PAIR(TERM_COLOR_GRASS));
-				break;
-			case SAND:
-				wattron(win_map, COLOR_PAIR(TERM_COLOR_SAND));
-				mvwaddch(win_map, y, x, 176);
-				wattroff(win_map, COLOR_PAIR(TERM_COLOR_SAND));
-				break;
-			case WATER:
-				wattron(win_map, COLOR_PAIR(TERM_COLOR_WATER));
-				mvwaddch(win_map, y, x, 176);
-				wattroff(win_map, COLOR_PAIR(TERM_COLOR_WATER));
-				break;
-			case WALL:
-				wattron(win_map, COLOR_PAIR(TERM_COLOR_WALL));
-				mvwaddch(win_map, y, x, 177);
-				wattroff(win_map, COLOR_PAIR(TERM_COLOR_WALL));
-				break;
-			default:
-				wattron(win_map, COLOR_PAIR(TERM_COLOR_PLAYER));
-				mvwaddch(win_map, y, x, 'O');
-				wattroff(win_map, COLOR_PAIR(TERM_COLOR_PLAYER));
-				break;
-			}
-		}
-	}
-}*/
-
-/*void PrintMap(Tile map[MAP_SIZE_X][MAP_SIZE_Y])
-{
-	for (int x = 0; x < MAP_WIN_SIZE_X; x++)
-	{
-		if (x > MAP_SIZE_X) break;
-
-		for (int y = 0; y < MAP_WIN_SIZE_Y; y++)
-		{
-			if (y > MAP_SIZE_Y) break;
-			switch (map[x][y].type)
-			{
-			case GROUND:
-				wattron(win_map, COLOR_PAIR(TERM_COLOR_GRASS));
-				mvwaddch(win_map, y, x, 177);
-				wattroff(win_map, COLOR_PAIR(TERM_COLOR_GRASS));
-				break;
-			case GRASS:
-				wattron(win_map, COLOR_PAIR(TERM_COLOR_GRASS));
-				mvwaddch(win_map, y, x, 176);
-				wattroff(win_map, COLOR_PAIR(TERM_COLOR_GRASS));
-				break;
-			case SAND:
-				wattron(win_map, COLOR_PAIR(TERM_COLOR_SAND));
-				mvwaddch(win_map, y, x, 176);
-				wattroff(win_map, COLOR_PAIR(TERM_COLOR_SAND));
-				break;
-			case WATER:
-				wattron(win_map, COLOR_PAIR(TERM_COLOR_WATER));
-				mvwaddch(win_map, y, x, 176);
-				wattroff(win_map, COLOR_PAIR(TERM_COLOR_WATER));
-				break;
-			case WALL:
-				wattron(win_map, COLOR_PAIR(TERM_COLOR_WALL));
-				mvwaddch(win_map, y, x, 177);
-				wattroff(win_map, COLOR_PAIR(TERM_COLOR_WALL));
-				break;
-			default:
-				wattron(win_map, COLOR_PAIR(TERM_COLOR_PLAYER));
-				mvwaddch(win_map, y, x, 'O');
-				wattroff(win_map, COLOR_PAIR(TERM_COLOR_PLAYER));
-				break;
-			}
-		}
-	}
-}*/
-
-
-/*void PrintMap(char map[MAP_SIZE_X][MAP_SIZE_Y])
-{
-	for (int x = 0; x < MAP_SIZE_X; x++)
-	{
-		for (int y = 0; y < MAP_SIZE_Y; y++)
-		{
-			switch (map[x][y])
-			{
-			case 'S':
-				wattron(win_map, COLOR_PAIR(TERM_COLOR_SAND));
-				mvwaddch(win_map, y, x, 176);
-				wattroff(win_map, COLOR_PAIR(TERM_COLOR_SAND));
-				break;
-			case 'G':
-				wattron(win_map, COLOR_PAIR(TERM_COLOR_GRASS));
-				mvwaddch(win_map, y, x, 176);
-				wattroff(win_map, COLOR_PAIR(TERM_COLOR_GRASS));
-				break;
-			case 'B':
-				wattron(win_map, COLOR_PAIR(TERM_COLOR_WATER));
-				mvwaddch(win_map, y, x, 176);
-				wattroff(win_map, COLOR_PAIR(TERM_COLOR_WATER));
-				break;
-			case 'W':
-				wattron(win_map, COLOR_PAIR(TERM_COLOR_WALL));
-				mvwaddch(win_map, y, x, 178);
-				wattroff(win_map, COLOR_PAIR(TERM_COLOR_WALL));
-				break;
-			case '0':
-				wattron(win_map, COLOR_PAIR(TERM_COLOR_WATER));
-				mvwaddch(win_map, y, x, 176);
-				wattroff(win_map, COLOR_PAIR(TERM_COLOR_WATER));
-				break;
-			default:
-				wattron(win_map, COLOR_PAIR(TERM_COLOR_PLAYER));
-				mvwaddch(win_map, y, x, 'O');
-				wattroff(win_map, COLOR_PAIR(TERM_COLOR_PLAYER));
-				break;
-			}
-		}
-	}
-}*/
-
-
-/*static BOOL _fit_console_window(HANDLE con_out, CONST SMALL_RECT *rect)
-{
-	SMALL_RECT run;
-	SHORT mx, my;
-
-	if (SetConsoleWindowInfo(con_out, TRUE, rect))
-		return TRUE;
-
-	run = *rect;
-	run.Right /= 2;
-	run.Bottom /= 2;
-
-	mx = run.Right;
-	my = run.Bottom;
-
-	if (!SetConsoleWindowInfo(con_out, TRUE, &run))
-		return FALSE;
-
-	for (run.Right = rect->Right; run.Right >= mx; run.Right--)
-		if (SetConsoleWindowInfo(con_out, TRUE, &run))
-			break;
-
-	if (run.Right < mx)
-		return FALSE;
-
-	for (run.Bottom = rect->Bottom; run.Bottom >= my; run.Bottom--)
-		if (SetConsoleWindowInfo(con_out, TRUE, &run))
-			return TRUE;
-
-	return FALSE;
-}*/
 
 void UpdateWindowSizes()
 {
@@ -448,37 +145,6 @@ void UpdateWindowSizes()
 
 	int w, h;
 	getmaxyx(stdscr, h, w); 
-
-
-	/*int nlines = h;
-	int ncols = w;
-	HANDLE hand = GetStdHandle(STD_OUTPUT_HANDLE);
-	SMALL_RECT rect;
-	COORD coord;
-	COORD size, max;
-	max = GetLargestConsoleWindowSize(hand);
-
-	rect.Left = rect.Top = 0;
-	rect.Right = ncols - 1;
-
-	if (rect.Right > max.X)
-		rect.Right = max.X;
-
-	rect.Bottom = nlines - 1;
-
-	if (rect.Bottom > max.Y)
-		rect.Bottom = max.Y;
-
-	size.X = rect.Right + 1;
-	size.Y = rect.Bottom + 1;
-
-	_fit_console_window(hand, &rect);
-	SetConsoleScreenBufferSize(hand, size);
-	SetConsoleActiveScreenBuffer(hand);
-	resize_term(h, w);*/
-
-	//wprintw(win_system, "Screenbuffer Y:%i, X:%i\n", info->dwSize.Y	, info->dwSize.X);
-
 
 	float left_w = 0.5f;
 	float right_w = 1.0f - left_w;
@@ -554,19 +220,6 @@ void PrintAnimals(std::vector<Animal> animals, int offset_x, int offset_y)
 	}
 	wattroff(win_map, COLOR_PAIR(TERM_COLOR_PLAYER));
 }
-
-/*void PrintPlayers(Player players[MAX_PLAYERS])
-{
-	wattron(win_map, COLOR_PAIR(TERM_COLOR_PLAYER));
-	//wattron(win_map, A_BLINK);
-	for each (auto player in players)
-	{
-		if(player.x > -1 && player.y > -1 && player.x <= MAP_WIN_SIZE_X && player.y <= MAP_WIN_SIZE_Y)
-		mvwaddch(win_map, player.y , player.x, '@');
-	}
-	//wattroff(win_map, A_BLINK);
-	wattroff(win_map, COLOR_PAIR(TERM_COLOR_PLAYER));
-}*/
 
 SYSTEMTIME* sys_time = new SYSTEMTIME();
 void UpdateWindows()
@@ -670,7 +323,8 @@ void InitWindows()
 	init_pair(TERM_COLOR_SPAWN, COLOR_WHITE, COLOR_BLUE);
 	init_pair(TERM_COLOR_DOOROPEN, COLOR_WHITE, COLOR_YELLOW);
 	init_pair(TERM_COLOR_DOORCLOSED, COLOR_BLACK, COLOR_YELLOW);
-
+	init_pair(TERM_COLOR_HOLE, COLOR_BLACK, COLOR_GREEN);
+	
 	keypad(win_input, TRUE);
 
 }

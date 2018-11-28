@@ -48,8 +48,8 @@ enum tiletype
 	FLOOR,
 	SPAWN,
 	DOOR,
-	ANIMALSPAWN
-
+	ANIMALSPAWN,
+	HOLE
 };
 
 struct Tile

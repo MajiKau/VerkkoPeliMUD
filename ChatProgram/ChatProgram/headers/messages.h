@@ -9,7 +9,8 @@ enum MessageType
 	JOIN,
 	MAP,
 	PLAYERS,
-	TILE
+	TILE,
+	DIG
 };
 
 enum Direction
@@ -37,12 +38,12 @@ struct MessagePacket :Packet
 
 struct MovePacket :Packet
 {
-	Direction dir;
+	Direction direction;
 };
 
 struct LookPacket :Packet
 {
-	Direction dir;
+	Direction direction;
 };
 
 struct JoinPacket :Packet
@@ -74,6 +75,11 @@ struct TileUpdatePacket :Packet
 	Tile tile;
 };
 
+struct DigPacket :Packet
+{
+	Direction direction;
+};
+
 JoinPacket JoinP(std::string name)
 {
 	if (name.size() > 19)
@@ -98,7 +104,7 @@ MovePacket MovementP(std::string name, Direction direction)
 	pack.type = MOVEMENT;
 
 	memcpy(pack.sender, name.c_str(), 20);
-	pack.dir = direction;
+	pack.direction = direction;
 	return pack;
 }
 
@@ -113,7 +119,7 @@ LookPacket LookP(std::string name, Direction direction)
 	pack.type = LOOK;
 
 	memcpy(pack.sender, name.c_str(), 20);
-	pack.dir = direction;
+	pack.direction = direction;
 	return pack;
 }
 
@@ -211,6 +217,21 @@ PlayersPacket PlayersP(std::string name, Player players[MAX_PLAYERS])
 	return pack;
 }
 
+DigPacket DigP(std::string name, Direction direction)
+{
+
+	if (name.size() > 19)
+	{
+		name.resize(19);
+	}
+	DigPacket pack;
+	pack.type = DIG;
+
+	memcpy(pack.sender, name.c_str(), 20);
+	pack.direction = direction;
+	return pack;
+}
+
 void SendMessageToPeer(ENetPeer* peer, Packet* package, unsigned int sequence_number)
 {
 	package->sequence = sequence_number;
@@ -297,83 +318,21 @@ void SendMessageToPeer(ENetPeer* peer, Packet* package, unsigned int sequence_nu
 		break;
 	}
 
-	default:
+	case DIG:
+	{
+		char* message[sizeof(DigPacket)];
+		memcpy(message, package, sizeof(DigPacket));
+
+		ENetPacket * packet = enet_packet_create(message,
+			sizeof(message),
+			ENET_PACKET_FLAG_RELIABLE);
+		enet_peer_send(peer, 0, packet);
 		break;
 	}
 
-	/*if (package->type == CHAT)
-	{
-		char* message[sizeof(MessagePacket)];
-		memcpy(message, package, sizeof(MessagePacket));
-
-		ENetPacket * packet = enet_packet_create(message,
-			sizeof(message),
-			ENET_PACKET_FLAG_RELIABLE);
-		enet_peer_send(peer, 0, packet);
+	default:
+		break;
 	}
-	else if (package->type == MOVEMENT)
-	{
-		char* message[sizeof(MovePacket)];
-		memcpy(message, package, sizeof(MovePacket));
-
-		ENetPacket * packet = enet_packet_create(message,
-			sizeof(message),
-			ENET_PACKET_FLAG_RELIABLE);
-		enet_peer_send(peer, 0, packet);
-	}
-	else if (package->type == LOOK)
-	{
-		char* message[sizeof(LookPacket)];
-		memcpy(message, package, sizeof(LookPacket));
-
-		ENetPacket * packet = enet_packet_create(message,
-			sizeof(message),
-			ENET_PACKET_FLAG_RELIABLE);
-		enet_peer_send(peer, 0, packet);
-	}
-	else if (package->type == JOIN)
-	{
-		char* message[sizeof(JoinPacket)];
-		memcpy(message, package, sizeof(JoinPacket));
-
-		ENetPacket * packet = enet_packet_create(message,
-			sizeof(message),
-			ENET_PACKET_FLAG_RELIABLE);
-		enet_peer_send(peer, 0, packet);
-	}
-	else if (package->type == MAP)
-	{
-		char* message = new char[sizeof(MapPacket)+sizeof(Tile)*MAP_SIZE_X*MAP_SIZE_Y];
-		memcpy(message, package, sizeof(MapPacket));
-		memcpy(message + sizeof(MapPacket), ((MapPacket*)package)->map, sizeof(Tile)*MAP_SIZE_X*MAP_SIZE_Y);
-
-		ENetPacket * packet = enet_packet_create(message,
-			sizeof(MapPacket) + sizeof(Tile)*MAP_SIZE_X*MAP_SIZE_Y,
-			ENET_PACKET_FLAG_RELIABLE);
-		enet_peer_send(peer, 0, packet);
-
-		delete[] message;
-	}
-	else if (package->type == PLAYERS)
-	{
-		char* message[sizeof(PlayersPacket)];
-		memcpy(message, package, sizeof(PlayersPacket));
-
-		ENetPacket * packet = enet_packet_create(message,
-			sizeof(message),
-			ENET_PACKET_FLAG_RELIABLE);
-		enet_peer_send(peer, 0, packet);
-	}
-	else if (package->type == TILE)
-	{
-		char* message[sizeof(TileUpdatePacket)];
-		memcpy(message, package, sizeof(TileUpdatePacket));
-
-		ENetPacket * packet = enet_packet_create(message,
-			sizeof(message),
-			ENET_PACKET_FLAG_RELIABLE);
-		enet_peer_send(peer, 0, packet);
-	}*/
 }
 
 

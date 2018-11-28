@@ -294,6 +294,7 @@ void HandleInput(ENetPeer * peer, std::string name)
 			break;
 
 		case 'l':
+		{
 			nodelay(win_input, false);
 			input = wgetch(win_input);
 			nodelay(win_input, true);
@@ -325,19 +326,50 @@ void HandleInput(ENetPeer * peer, std::string name)
 				break;
 			}
 			break;
+		}
 
 		case 't':
+		{
 			typing = true;
 
 			buffer = new char[1000];
 			index = 0;
 			wprintw(win_input, "MSG:");
-
 			break;
+		}
+
+		case 'k':
+		{
+			nodelay(win_input, false);
+			input = wgetch(win_input);
+			nodelay(win_input, true);
+			switch (input)
+			{
+			case 'w':
+				client_packet_sequence++;
+				SendMessageToPeer(peer, &DigP(name, NORTH), client_packet_sequence);
+				break;
+
+			case 'a':
+				client_packet_sequence++;
+				SendMessageToPeer(peer, &DigP(name, WEST), client_packet_sequence);
+				break;
+
+			case 's':
+				client_packet_sequence++;
+				SendMessageToPeer(peer, &DigP(name, SOUTH), client_packet_sequence);
+				break;
+
+			case 'd':
+				client_packet_sequence++;
+				SendMessageToPeer(peer, &DigP(name, EAST), client_packet_sequence);
+				break;
+			}
 
 		default:
 			break;
 
+		}
 		}
 	}
 	else
