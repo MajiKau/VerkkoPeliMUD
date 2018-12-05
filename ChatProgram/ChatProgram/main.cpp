@@ -87,7 +87,15 @@ int main(int argc, char ** argv)
 	else if (input == '2')
 	{
 		ENetHost* client = CreateClient();
-		ENetPeer* peer = ConnectToHost(client);
+
+		nodelay(win_input, true);
+		wprintw(win_input, "Address (Leave empty for localhost):");
+		char addr[30];
+		echo();
+		wgetstr(win_input, addr);
+		noecho();
+
+		ENetPeer* peer = ConnectToHost(client, addr);
 		std::thread client_thread(ClientThread, 0, client, peer, &running);
 		//std::thread message_thread(InputWindowThread, peer, &running);
 		

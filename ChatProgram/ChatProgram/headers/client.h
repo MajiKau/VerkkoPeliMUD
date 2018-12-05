@@ -9,13 +9,20 @@
 static unsigned int client_packet_sequence = 0;
 static unsigned int server_packet_sequence = 0;
 
-ENetPeer * ConnectToHost(ENetHost* client)
+ENetPeer * ConnectToHost(ENetHost* client, const char* server_address = "localhost")
 {
 	ENetAddress address;
 	ENetEvent event;
 	ENetPeer *peer;
 	/* Connect to localhost:8888. */
-	enet_address_set_host(&address, "localhost");
+	if (server_address != "")
+	{
+		enet_address_set_host(&address, server_address);
+	}
+	else
+	{
+		enet_address_set_host(&address, "localhost");
+	}
 	address.port = 8888;
 	/* Initiate the connection, allocating the two channels 0 and 1. */
 	peer = enet_host_connect(client, &address, 2, 0);
@@ -145,6 +152,8 @@ ENetHost * CreateClient()
 	}
 }*/
 bool typing = false;
+bool looking = false;
+bool digging = false;
 char* buffer;
 int index;
 
@@ -174,11 +183,6 @@ void PlayerReconciliation(std::string name)
 			}
 		}
 	}
-	/*for (int i = 0; i < MAX_PLAYERS; i++)
-	{
-		players_copy[i] = players[i];
-	}*/
-
 
 	Player* player = NULL;
 	for (int i = 0; i < MAX_PLAYERS; i++)
@@ -253,7 +257,127 @@ void PlayerReconciliation(std::string name)
 
 void HandleInput(ENetPeer * peer, std::string name)
 {
-	if (!typing)
+	if (typing)
+	{
+		char input = wgetch(win_input);
+		switch (input)
+		{
+		case 10:
+			buffer[index] = '\0';
+			index++;
+			client_packet_sequence++;
+			SendMessageToPeer(peer, &MessageP(name, buffer), client_packet_sequence);
+			typing = false;
+			wprintw(win_input, "\n");
+			wprintw(win_chat, "%s: %s\n", name.c_str(), buffer);
+			break;
+
+		case 8:
+			if (index > 0)
+			{
+				wprintw(win_input, "%c", input);
+				wdelch(win_input);
+				index--;
+				buffer[index] = '\0';
+			}
+			break;
+
+		default:
+			if (input != -1)
+			{
+				wprintw(win_input, "%c", input);
+				buffer[index] = input;
+				index++;
+				buffer[index] = '\0';
+			}
+			break;
+		}
+	}
+	else if(looking)
+	{
+		char input = wgetch(win_input);
+		if (input != ERR)
+		{
+			looking = false;
+
+			switch (input)
+			{
+			case 'w':
+				client_packet_sequence++;
+				SendMessageToPeer(peer, &LookP(name, NORTH), client_packet_sequence);
+				wprintw(win_input, "[NORTH]\n");
+				break;
+
+			case 'a':
+				client_packet_sequence++;
+				SendMessageToPeer(peer, &LookP(name, WEST), client_packet_sequence);
+				wprintw(win_input, "[WEST]\n");
+				break;
+
+			case 's':
+				client_packet_sequence++;
+				SendMessageToPeer(peer, &LookP(name, SOUTH), client_packet_sequence);
+				wprintw(win_input, "[SOUTH]\n");
+				break;
+
+			case 'd':
+				client_packet_sequence++;
+				SendMessageToPeer(peer, &LookP(name, EAST), client_packet_sequence);
+				wprintw(win_input, "[EAST]\n");
+				break;
+
+			case 'l':
+				client_packet_sequence++;
+				SendMessageToPeer(peer, &LookP(name, BELOW), client_packet_sequence);
+				wprintw(win_input, "[BELOW]\n");
+				break;
+
+			default:
+				wprintw(win_input, "[CANCEL]\n");
+				break;
+			}
+		}
+	}
+	else if (digging)
+	{
+		char input = wgetch(win_input);
+		if (input != ERR)
+		{
+			digging = false;
+
+			switch (input)
+			{
+			case 'w':
+				client_packet_sequence++;
+				SendMessageToPeer(peer, &DigP(name, NORTH), client_packet_sequence);
+				wprintw(win_input, "[NORTH]\n");
+				break;
+
+			case 'a':
+				client_packet_sequence++;
+				SendMessageToPeer(peer, &DigP(name, WEST), client_packet_sequence);
+				wprintw(win_input, "[WEST]\n");
+				break;
+
+			case 's':
+				client_packet_sequence++;
+				SendMessageToPeer(peer, &DigP(name, SOUTH), client_packet_sequence);
+				wprintw(win_input, "[SOUTH]\n");
+				break;
+
+			case 'd':
+				client_packet_sequence++;
+				SendMessageToPeer(peer, &DigP(name, EAST), client_packet_sequence);
+				wprintw(win_input, "[EAST]\n");
+				break;
+
+			default:
+				wprintw(win_input, "[CANCEL]\n");
+				break;
+			}
+		}
+	}
+	else
 	{
 		//char * msg;
 		std::string str;
@@ -295,36 +419,8 @@ void HandleInput(ENetPeer * peer, std::string name)
 
 		case 'l':
 		{
-			nodelay(win_input, false);
-			input = wgetch(win_input);
-			nodelay(win_input, true);
-			switch (input)
-			{
-			case 'w':
-				client_packet_sequence++;
-				SendMessageToPeer(peer, &LookP(name, NORTH), client_packet_sequence);
-				break;
-
-			case 'a':
-				client_packet_sequence++;
-				SendMessageToPeer(peer, &LookP(name, WEST), client_packet_sequence);
-				break;
-
-			case 's':
-				client_packet_sequence++;
-				SendMessageToPeer(peer, &LookP(name, SOUTH), client_packet_sequence);
-				break;
-
-			case 'd':
-				client_packet_sequence++;
-				SendMessageToPeer(peer, &LookP(name, EAST), client_packet_sequence);
-				break;
-
-			case 'l':
-				client_packet_sequence++;
-				SendMessageToPeer(peer, &LookP(name, BELOW), client_packet_sequence);
-				break;
-			}
+			wprintw(win_input, "[Look]:");
+			looking = true;			
 			break;
 		}
 
@@ -334,80 +430,25 @@ void HandleInput(ENetPeer * peer, std::string name)
 
 			buffer = new char[1000];
 			index = 0;
-			wprintw(win_input, "MSG:");
+			wprintw(win_input, "[MSG]:");
 			break;
 		}
 
 		case 'k':
 		{
-			nodelay(win_input, false);
-			input = wgetch(win_input);
-			nodelay(win_input, true);
-			switch (input)
-			{
-			case 'w':
-				client_packet_sequence++;
-				SendMessageToPeer(peer, &DigP(name, NORTH), client_packet_sequence);
-				break;
-
-			case 'a':
-				client_packet_sequence++;
-				SendMessageToPeer(peer, &DigP(name, WEST), client_packet_sequence);
-				break;
-
-			case 's':
-				client_packet_sequence++;
-				SendMessageToPeer(peer, &DigP(name, SOUTH), client_packet_sequence);
-				break;
-
-			case 'd':
-				client_packet_sequence++;
-				SendMessageToPeer(peer, &DigP(name, EAST), client_packet_sequence);
-				break;
-			}
+			wprintw(win_input, "[Dig]:");
+			digging = true;
+			break;
+		}
+			
 
 		default:
 			break;
 
 		}
-		}
+		
 	}
-	else
-	{
-		char input = wgetch(win_input);
-		switch (input)
-		{
-		case 10:
-			buffer[index] = '\0';
-			index++;
-			client_packet_sequence++;
-			SendMessageToPeer(peer, &MessageP(name, buffer), client_packet_sequence);
-			typing = false;
-			wprintw(win_input, "\n");
-			wprintw(win_chat, "%s: %s\n", name.c_str(), buffer);
-			break;
-
-		case 8:
-			if (index > 0)
-			{
-				wprintw(win_input, "%c", input);
-				wdelch(win_input);
-				index--;
-				buffer[index] = '\0';
-			}
-			break;
-
-		default:
-			if (input != -1)
-			{
-				wprintw(win_input, "%c", input);
-				buffer[index] = input;
-				index++;
-				buffer[index] = '\0';
-			}
-			break;
-		}
-	}
+	
 }
 
 
