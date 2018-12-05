@@ -13,6 +13,7 @@ WINDOW * win_extra;
 //WINDOW * win_extra_borders;
 WINDOW * win_chat;
 //WINDOW * win_chat_borders;
+WINDOW * win_player;
 
 std::vector<WINDOW*> windows;
 std::vector<WINDOW*> window_borders;
@@ -154,35 +155,42 @@ void UpdateWindowSizes()
 
 	float ch_h = 0.4f;
 	float in_h = 0.15f;
-	float ex_h = 1.0f - ch_h - in_h;
+	float ex_h = 0.1f;
+	float pl_h = 1.0f - ch_h - in_h - ex_h;
 
 	wresize(win_system,	(int)(st_h*h-2), (int)(left_w*w-2));
 	wresize(win_map,	(int)(ma_h*h-2), (int)(left_w*w-2));
 	wresize(win_chat,	(int)(ch_h*h-2), (int)(right_w*w-2));
 	wresize(win_input,	(int)(in_h*h-2), (int)(right_w*w-2));
 	wresize(win_extra,	(int)(ex_h*h-2), (int)(right_w*w-2));
+	wresize(win_player, (int)(pl_h*h-2), (int)(right_w*w-2));
+
 	wresize(window_borders[0], (int)(st_h*h), (int)(left_w*w));
 	wresize(window_borders[1], (int)(ma_h*h), (int)(left_w*w));
 	wresize(window_borders[2], (int)(ch_h*h), (int)(right_w*w));
 	wresize(window_borders[3], (int)(in_h*h), (int)(right_w*w));
 	wresize(window_borders[4], (int)(ex_h*h), (int)(right_w*w));
+	wresize(window_borders[5], (int)(pl_h*h), (int)(right_w*w));
 
-	mvwin(win_system,	0+1,						0+1);
-	mvwin(win_map,		(int)(st_h*h+1),			0+1);
-	mvwin(win_chat,		0+1,						(int)(left_w*w+1));
-	mvwin(win_input,	(int)(ch_h*h+1),			(int)(left_w*w+1));
-	mvwin(win_extra,	(int)((ch_h + in_h)*h + 1), (int)(left_w*w + 1));
+	mvwin(win_system,	0+1,								0+1);
+	mvwin(win_map,		(int)(st_h*h+1),					0+1);
+	mvwin(win_chat,		0+1,								(int)(left_w*w+1));
+	mvwin(win_input,	(int)(ch_h*h+1),					(int)(left_w*w+1));
+	mvwin(win_extra,	(int)((ch_h + in_h)*h + 1),			(int)(left_w*w + 1));
+	mvwin(win_player,   (int)((ch_h + in_h + ex_h)*h + 1),	(int)(left_w*w + 1));
 	mvwin(window_borders[0], 0, 0);
 	mvwin(window_borders[1], (int)(st_h*h), 0);
 	mvwin(window_borders[2], 0, (int)(left_w*w));
 	mvwin(window_borders[3], (int)(ch_h*h), (int)(left_w*w));
 	mvwin(window_borders[4], (int)((ch_h + in_h)*h), (int)(left_w*w));
+	mvwin(window_borders[5], (int)((ch_h + in_h + ex_h)*h), (int)(left_w*w));
 
 	wborder(window_borders[0], 0, 0, 0, 0, 0, 0, 0, 0);
 	wborder(window_borders[1], 0, 0, 0, 0, 0, 0, 0, 0);
 	wborder(window_borders[2], 0, 0, 0, 0, 0, 0, 0, 0);
 	wborder(window_borders[3], 0, 0, 0, 0, 0, 0, 0, 0);
 	wborder(window_borders[4], 0, 0, 0, 0, 0, 0, 0, 0);
+	wborder(window_borders[5], 0, 0, 0, 0, 0, 0, 0, 0);
 
 	wprintw(win_system, "Window Y:%i, X:%i\n", h, w);
 	wprintw(win_system, "Terminal Y:%i, X:%i\n", LINES, COLS);
@@ -208,12 +216,18 @@ void PrintPlayers(Player players[MAX_PLAYERS], int offset_x, int offset_y, std::
 	wattroff(win_map, COLOR_PAIR(TERM_COLOR_PLAYER));
 }
 
-void PrintAnimals(std::vector<Animal> animals, int offset_x, int offset_y)
+void PrintPlayerData(Player player)
+{
+	wclear(win_player);
+	wprintw(win_player, "Name: %s\nScore: %d\nDirt: %d\n", player.name, player.score, player.dirt_dug);
+}
+
+void PrintAnimals(Animal animals[MAX_ANIMALS], int offset_x, int offset_y)
 {
 	wattron(win_map, COLOR_PAIR(TERM_COLOR_PLAYER));
 	for each (auto animal in animals)
 	{
-		if (animal.x > -1 && animal.y > -1 && animal.x <= MAP_WIN_SIZE_X + offset_x && animal.y <= MAP_WIN_SIZE_Y + offset_y)
+		if (animal.x > -1 && animal.x > offset_x && animal.y > -1 && animal.y > offset_y && animal.x <= MAP_WIN_SIZE_X + offset_x && animal.y <= MAP_WIN_SIZE_Y + offset_y)
 		{
 			mvwaddch(win_map, animal.y - offset_y, animal.x - offset_x, '*');
 		}
@@ -289,7 +303,8 @@ void InitWindows()
 
 	float ch_h = 0.4f;
 	float in_h = 0.15f;
-	float ex_h = 1.0f - ch_h - in_h;
+	float ex_h = 0.1f;
+	float pl_h = 1.0f - ch_h - in_h - ex_h;
 
 	getmaxyx(stdscr, h, w);
 
@@ -302,6 +317,8 @@ void InitWindows()
 	win_input = MakeWindowWithBorders((int)(in_h*h), (int)(right_w*w), (int)(ch_h*h), (int)(left_w*w));
 
 	win_extra = MakeWindowWithBorders((int)(ex_h*h), (int)(right_w*w), (int)((ch_h + in_h)*h), (int)(left_w*w));
+
+	win_player = MakeWindowWithBorders((int)(pl_h*h), (int)(right_w*w), (int)((ch_h + in_h + ex_h)*h), (int)(left_w*w));
 
 	cbreak();
 	noecho();

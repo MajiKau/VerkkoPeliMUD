@@ -448,6 +448,8 @@ void ClientThread(int id, ENetHost* client, ENetPeer* peer, bool* running)
 	client_packet_sequence++;
 	SendMessageToPeer(peer, &JoinP(name), client_packet_sequence);
 
+	Player player;
+
 	while (running)
 	{
 		HandleInput(peer, name);
@@ -486,7 +488,9 @@ void ClientThread(int id, ENetHost* client, ENetPeer* peer, bool* running)
 
 
 		PrintMap(tile_map, offset_x, offset_y);
+		PrintAnimals(animals, offset_x, offset_y);
 		PrintPlayers(players_copy, offset_x, offset_y, name);
+		PrintPlayerData(player);
 
 		UpdateWindows();
 
@@ -542,6 +546,19 @@ void ClientThread(int id, ENetHost* client, ENetPeer* peer, bool* running)
 					{
 						players[i] = players_pack->players[i];
 						players_copy[i] = players[i];
+						if (strncmp(players[i].name, name, 20) == 0)
+						{
+							player = players[i];
+						}
+					}
+					break;
+				}
+				case ANIMALS:
+				{
+					AnimalsPacket* animals_pack = (AnimalsPacket*)event.packet->data;
+					for (int i = 0; i < MAX_ANIMALS; i++)
+					{
+						animals[i] = animals_pack->animals[i];
 					}
 					break;
 				}

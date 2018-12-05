@@ -10,7 +10,8 @@ enum MessageType
 	MAP,
 	PLAYERS,
 	TILE,
-	DIG
+	DIG,
+	ANIMALS
 };
 
 enum Direction
@@ -67,6 +68,11 @@ struct MapPacket :Packet
 struct PlayersPacket :Packet
 {
 	Player players[MAX_PLAYERS];
+};
+
+struct AnimalsPacket :Packet
+{
+	Animal animals[MAX_ANIMALS];
 };
 
 struct TileUpdatePacket :Packet
@@ -213,7 +219,23 @@ PlayersPacket PlayersP(std::string name, Player players[MAX_PLAYERS])
 	{
 		pack.players[i] = players[i];
 	}
-	//pack.map = map;
+	return pack;
+}
+
+AnimalsPacket AnimalsP(std::string name, Animal animals[MAX_ANIMALS])
+{
+	if (name.size() > 19)
+	{
+		name.resize(19);
+	}
+	AnimalsPacket pack;
+	pack.type = ANIMALS;
+
+	memcpy(pack.sender, name.c_str(), 20);
+	for (int i = 0; i < MAX_ANIMALS; i++)
+	{
+		pack.animals[i] = animals[i];
+	}
 	return pack;
 }
 
@@ -299,6 +321,17 @@ void SendMessageToPeer(ENetPeer* peer, Packet* package, unsigned int sequence_nu
 	{
 		char* message[sizeof(PlayersPacket)];
 		memcpy(message, package, sizeof(PlayersPacket));
+
+		ENetPacket * packet = enet_packet_create(message,
+			sizeof(message),
+			ENET_PACKET_FLAG_RELIABLE);
+		enet_peer_send(peer, 0, packet);
+		break;
+	}
+	case ANIMALS:
+	{
+		char* message[sizeof(AnimalsPacket)];
+		memcpy(message, package, sizeof(AnimalsPacket));
 
 		ENetPacket * packet = enet_packet_create(message,
 			sizeof(message),

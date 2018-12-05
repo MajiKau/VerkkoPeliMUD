@@ -8,14 +8,16 @@
 #include "file_reader.h"
 #include "delayfunc.h"
 
-#define LAG_ENABLED 1
-#define LAG_AMOUNT 0.040
+#define LAG_ENABLED 0
+#define LAG_AMOUNT 0.040f
 
 #define SERVER_SEND_RATE 0.05f
 
 int spawnpoint_x = 1;
 int spawnpoint_y = 1;
 
+
+std::vector<std::pair<unsigned int, unsigned int>> animal_spawnpoints;
 int animal_spawnpoint_x = 1;
 int animal_spawnpoint_y = 1;
 
@@ -28,9 +30,12 @@ float send_players_cooldown = 0.0f;
 
 void SpawnAnimals()
 {
-	for (int i = 0; i < 10; i++)
+	int j = 0;
+	for (int i = 0; i < MAX_ANIMALS; i++)
 	{
-		animals.push_back(Animal(animal_spawnpoint_x, animal_spawnpoint_y));
+		j = rand() % animal_spawnpoints.size();
+		animals[i] = Animal(animal_spawnpoints[j].first, animal_spawnpoints[j].second);
+		//animals.push_back(Animal(animal_spawnpoint_x, animal_spawnpoint_y));
 	}
 }
 
@@ -95,10 +100,12 @@ void CreateMap()
 			switch (map_v[y][x])
 			{
 			case '0':
+			case 'G':
 				tile_map[x][y].type = GRASS;
 				tile_map[x][y].walkable = true;
 				break;
 			case '1':
+			case 'W':
 				tile_map[x][y].type = WALL;
 				tile_map[x][y].walkable = false;
 				break;
@@ -106,42 +113,44 @@ void CreateMap()
 				tile_map[x][y].type = GROUND;
 				tile_map[x][y].walkable = true;
 				break;
+			case '3':
 			case 'S':
 				tile_map[x][y].type = SAND;
 				tile_map[x][y].walkable = true;
 				break;
-			case 'G':
-				tile_map[x][y].type = GRASS;
-				tile_map[x][y].walkable = true;
 				break;
+			case '4':
 			case 'B':
 				tile_map[x][y].type = WATER;
 				tile_map[x][y].walkable = false;
 				break;
-			case 'W':
-				tile_map[x][y].type = WALL;
-				tile_map[x][y].walkable = false;
 				break;
+			case '5':
 			case 'F':
 				tile_map[x][y].type = FLOOR;
 				tile_map[x][y].walkable = true;
 				break;
+			case '6':
 			case 'P':
 				tile_map[x][y].type = SPAWN;
 				tile_map[x][y].walkable = true;
 				spawnpoint_x = x;
 				spawnpoint_y = y;
 				break;
+			case '7':
 			case 'D':
 				tile_map[x][y].type = DOOR;
 				tile_map[x][y].walkable = false;
 				break;
+			case '8':
 			case 'A':
 				tile_map[x][y].type = ANIMALSPAWN;
 				tile_map[x][y].walkable = true;
+				animal_spawnpoints.push_back({ x,y });
 				animal_spawnpoint_x = x;
 				animal_spawnpoint_y = y;
 				break;
+			case '9':
 			case 'X':
 				tile_map[x][y].type = HOLE;
 				tile_map[x][y].walkable = false;
@@ -331,6 +340,89 @@ std::string HandleLook(LookPacket* packet)
 	return message;
 }
 
+void FloodTiles(int x, int y, tiletype type = HOLE)
+{
+	Tile tile = tile_map[x][y];
+	if (tile.type == type)
+	{
+		tile.type = WATER;
+		tile.walkable = false;
+		UpdateTile(x, y, tile);
+	}
+
+	int x1 = x - 1;
+	int x2 = x + 1;
+	int y1 = y - 1;
+	int y2 = y + 1;
+
+	if (x1 >= 0)
+	{
+		if (tile_map[x1][y].type == type)
+		{
+			FloodTiles(x1, y);
+		}
+	}
+	if (x2 < MAP_SIZE_X)
+	{
+		if (tile_map[x2][y].type == type)
+		{
+			FloodTiles(x2, y);
+		}
+	}
+	if (y1 >= 0)
+	{
+		if (tile_map[x][y1].type == type)
+		{
+			FloodTiles(x, y1);
+		}
+	}
+	if (y2 < MAP_SIZE_Y)
+	{
+		if (tile_map[x][y2].type == type)
+		{
+			FloodTiles(x, y2);
+		}
+	}
+}
+
+bool TileAroundTile(int x, int y, tiletype type)
+{
+	int x1 = x - 1;
+	int x2 = x + 1;
+	int y1 = y - 1;
+	int y2 = y + 1;
+
+	if (x1 >= 0)
+	{
+		if (tile_map[x1][y].type == type)
+		{
+			return true;
+		}
+	}
+	if (x2 < MAP_SIZE_X)
+	{
+		if (tile_map[x2][y].type == type)
+		{
+			return true;
+		}
+	}
+	if (y1 >= 0)
+	{
+		if (tile_map[x][y1].type == type)
+		{
+			return true;
+		}
+	}
+	if (y2 < MAP_SIZE_Y)
+	{
+		if (tile_map[x][y2].type == type)
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
 std::string HandleDig(DigPacket* packet)
 {
 	Player* player = NULL;
@@ -378,13 +470,65 @@ std::string HandleDig(DigPacket* packet)
 		break;
 	}
 
+	for (auto& animal : animals)
+	{
+		if (animal.x == x && animal.y == y)
+		{
+			animal.Respawn(animal_spawnpoints);
+			player->score++;
+		}
+	}
+
 	Tile tile = tile_map[x][y];
-	if (tile.type == GRASS)
+	switch (tile.type)
+	{
+
+	case GRASS:
 	{
 		tile.type = HOLE;
 		tile.walkable = false;
 		UpdateTile(x, y, tile);
+
+		if (TileAroundTile(x, y, WATER))
+		{
+			FloodTiles(x, y);
+		}
+
+		player->dirt_dug++;
 		message = "You dug a hole!";
+		break;
+	}
+	case HOLE:
+	{
+		if (player->dirt_dug > 0)
+		{
+			player->dirt_dug--;
+			tile.type = GRASS;
+			tile.walkable = true;
+			UpdateTile(x, y, tile);
+			message = "You filled a hole!";
+		}
+		break;
+	}
+
+	case WATER:
+	{
+		if (player->dirt_dug > 0)
+		{
+			player->dirt_dug--;
+			tile.type = GRASS;
+			tile.walkable = true;
+			UpdateTile(x, y, tile);
+			message = "You filled a hole!";
+		}
+		break;
+	}
+
+	default:
+		break;
+	}
+	if (tile.type == GRASS)
+	{
 	}
 
 	return message;
@@ -690,13 +834,18 @@ void ServerThread(int id, ENetHost* server, bool* running)
 					PlayersPacket* players_pack = new PlayersPacket();
 					*players_pack = PlayersP("", players);
 
+					AnimalsPacket* animals_pack = new AnimalsPacket();
+					*animals_pack = AnimalsP("", animals);
+
 #if LAG_ENABLED
 					std::function<void()> func = [c_peer, players_pack]() { SendMessageToPeer(c_peer.first, players_pack, c_peer.second); };
-					DelayedFunction(func, LAG_AMOUNT);
+					DelayedFunction(func, LAG_AMOUNT); 
+					std::function<void()> func2 = [c_peer, animals_pack]() { SendMessageToPeer(c_peer.first, animals_pack, c_peer.second); };
+					DelayedFunction(func2, LAG_AMOUNT);
 #else
 					SendMessageToPeer(c_peer.first, players_pack, c_peer.second);
+					SendMessageToPeer(c_peer.first, animals_pack, c_peer.second);
 #endif
-
 				}
 			}
 		}
