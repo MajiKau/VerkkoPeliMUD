@@ -9,6 +9,7 @@ void DelayedFunction(std::function<void()> function, float time)
 	delayed_functions.push_back({ function,time });
 }
 
+//Calls functions once a specific amount of time has passed
 void DelayedFunctionUpdate(float deltatime)
 {
 	for (int i = 0; i < delayed_functions.size(); i++)

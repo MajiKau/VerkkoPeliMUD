@@ -8,10 +8,10 @@
 #include "file_reader.h"
 #include "delayfunc.h"
 
-#define LAG_ENABLED 0
-#define LAG_AMOUNT 0.040f
+bool is_lag_enabled = false; //Simulated lag
+float lag_amount = 0.040f;
 
-#define SERVER_SEND_RATE 0.05f
+float server_send_rate = 1.0f / 20.0f; //Server sends clients player and animal data 20 times a second.
 
 int spawnpoint_x = 1;
 int spawnpoint_y = 1;
@@ -173,12 +173,15 @@ void UpdateTile(int x, int y, Tile tile)
 			TileUpdatePacket* tile_pack = new TileUpdatePacket();
 			*tile_pack = TileP("", x, y, tile_map[x][y]);
 
-#if LAG_ENABLED
-			std::function<void()> func = [c_peer, tile_pack]() { SendMessageToPeer(c_peer.first, tile_pack, c_peer.second); };
-			DelayedFunction(func, LAG_AMOUNT);
-#else
-			SendMessageToPeer(c_peer.first, tile_pack, c_peer.second);
-#endif
+			if (is_lag_enabled)
+			{
+				std::function<void()> func = [c_peer, tile_pack]() { SendMessageToPeer(c_peer.first, tile_pack, c_peer.second); };
+				DelayedFunction(func, lag_amount);
+			}
+			else
+			{
+				SendMessageToPeer(c_peer.first, tile_pack, c_peer.second);
+			}
 		}
 	}
 }
@@ -584,29 +587,13 @@ void DisconnectPeer(ENetPeer* peer, ENetHost* client)
 		case ENET_EVENT_TYPE_DISCONNECT:
 			wprintw(win_system, "Disconnection succeeded.");
 			return;
-
-
-			//DO THINGS HERE
-
-
 		}
 	}
 	/* We've arrived here, so the disconnect attempt didn't */
 	/* succeed yet.  Force the connection down.             */
 	enet_peer_reset(peer);
 
-
-	//DO THINGS HERE
 }
-
-
-/*Packet* pack = new Packet;
-MessagePacket* msg_pack = new MessagePacket;
-LookPacket* look_pack = new LookPacket;
-MovePacket* move_pack = new MovePacket;
-JoinPacket* join_pack = new JoinPacket;
-MapPacket* map_pack = new MapPacket;
-PlayersPacket* players_pack = new PlayersPacket;*/
 
 void HandleEvent(ENetEvent event, ENetHost* server)
 {
@@ -663,12 +650,15 @@ void HandleEvent(ENetEvent event, ENetHost* server)
 					continue;
 				}
 
-#if LAG_ENABLED
-				std::function<void()> func = [c_peer, msg_pack]() { SendMessageToPeer(c_peer.first, msg_pack, c_peer.second); };
-				DelayedFunction(func, LAG_AMOUNT);
-#else
-				SendMessageToPeer(c_peer.first, msg_pack, c_peer.second);
-#endif
+				if (is_lag_enabled)
+				{
+					std::function<void()> func = [c_peer, msg_pack]() { SendMessageToPeer(c_peer.first, msg_pack, c_peer.second); };
+					DelayedFunction(func, lag_amount);
+				}
+				else
+				{
+					SendMessageToPeer(c_peer.first, msg_pack, c_peer.second);
+				}
 
 			}
 
@@ -684,12 +674,15 @@ void HandleEvent(ENetEvent event, ENetHost* server)
 			message = HandleMovement(move_pack);
 			if (message != "")
 			{
-#if LAG_ENABLED
-				std::function<void()> func = [peer, message, sequence]() { SendMessageToPeer(peer, &MessageP("[Movement]", message), sequence); };
-				DelayedFunction(func, LAG_AMOUNT);
-#else
-				SendMessageToPeer(peer, &MessageP("[Movement]", message), sequence);
-#endif
+				if (is_lag_enabled)
+				{
+					std::function<void()> func = [peer, message, sequence]() { SendMessageToPeer(peer, &MessageP("[Movement]", message), sequence); };
+					DelayedFunction(func, lag_amount);
+				}
+				else
+				{
+					SendMessageToPeer(peer, &MessageP("[Movement]", message), sequence);
+				}
 
 			}
 			wprintw(win_system, "[%d]", move_pack->direction);
@@ -702,12 +695,15 @@ void HandleEvent(ENetEvent event, ENetHost* server)
 			message = HandleLook(look_pack);
 			if (message != "")
 			{
-#if LAG_ENABLED
-				std::function<void()> func = [peer, message, sequence]() { SendMessageToPeer(peer, &MessageP("[Look]", message), sequence); };
-				DelayedFunction(func, LAG_AMOUNT);
-#else
-				SendMessageToPeer(peer, &MessageP("[Look]", message), sequence);
-#endif
+				if (is_lag_enabled)
+				{
+					std::function<void()> func = [peer, message, sequence]() { SendMessageToPeer(peer, &MessageP("[Look]", message), sequence); };
+					DelayedFunction(func, lag_amount);
+				}
+				else
+				{
+					SendMessageToPeer(peer, &MessageP("[Look]", message), sequence);
+				}
 			}
 			wprintw(win_system, "[%d]", look_pack->direction);
 			break;
@@ -724,13 +720,16 @@ void HandleEvent(ENetEvent event, ENetHost* server)
 			players[num_of_players] = (Player(join_pack->sender, spawnpoint_x, spawnpoint_y));
 			num_of_players++;
 			MapPacket* map_pack = new MapPacket();
-			*map_pack = MapP("", tile_map);
-#if LAG_ENABLED
+			*map_pack = MapP("", tile_map); 
+			if (is_lag_enabled)
+			{
 				std::function<void()> func = [peer, map_pack, sequence]() { SendMessageToPeer(peer, map_pack, sequence); };
-				DelayedFunction(func, LAG_AMOUNT);
-#else
-			SendMessageToPeer(peer, map_pack, sequence);
-#endif
+				DelayedFunction(func, lag_amount);
+			}
+			else
+			{
+				SendMessageToPeer(peer, map_pack, sequence);
+			}
 			break;
 		}
 
@@ -740,12 +739,15 @@ void HandleEvent(ENetEvent event, ENetHost* server)
 			message = HandleDig(look_pack);
 			if (message != "")
 			{
-#if LAG_ENABLED
+				if (is_lag_enabled)
+				{
 				std::function<void()> func = [peer, message, sequence]() { SendMessageToPeer(peer, &MessageP("[Look]", message), sequence); };
-				DelayedFunction(func, LAG_AMOUNT);
-#else
-				SendMessageToPeer(peer, &MessageP("[Look]", message), sequence);
-#endif
+				DelayedFunction(func, lag_amount);
+				}
+				else
+				{
+					SendMessageToPeer(peer, &MessageP("[Look]", message), sequence);
+				}
 			}
 			wprintw(win_system, "[%d]", look_pack->direction);
 			break;
@@ -771,7 +773,6 @@ void HandleEvent(ENetEvent event, ENetHost* server)
 		wprintw(win_system, "%s disconnected.", (char*)event.peer->data);
 		/* Reset the peer's client information. */
 
-
 		event.peer->data = NULL;
 		connected_peers.erase(event.peer);
 		break;
@@ -784,21 +785,12 @@ void HandleEvent(ENetEvent event, ENetHost* server)
 
 void ServerThread(int id, ENetHost* server, bool* running)
 {
-	//nodelay(win_input, true);
-	//halfdelay(1);
-	//std::vector<ENetPeer*> connected_peers;
-
-
 	ENetEvent event;
 
 	char c1 = (char)176;
-
 	char c2 = (char)177;
-
 	char c3 = (char)178;
-
 	char c4 = (char)219;
-
 	wprintw(win_system, "%c(%i),%c(%i),%c(%i),%c(%i)\n", c1, c1, c2, c2, c3, c3, c4, c4);
 
 
@@ -814,9 +806,10 @@ void ServerThread(int id, ENetHost* server, bool* running)
 
 		UpdateAnimals(deltatime);
 
-#if LAG_ENABLED
-		DelayedFunctionUpdate(deltatime);
-#endif // LAG_ENABLED
+		if (is_lag_enabled)
+		{
+			DelayedFunctionUpdate(deltatime);
+		}
 
 
 		PrintMap(tile_map, 0, 0);
@@ -826,7 +819,7 @@ void ServerThread(int id, ENetHost* server, bool* running)
 
 		if (send_players_cooldown < 0.0f)
 		{
-			send_players_cooldown = SERVER_SEND_RATE;
+			send_players_cooldown = server_send_rate;
 			for each (auto c_peer in connected_peers)
 			{
 				if (num_of_players != 0)
@@ -837,15 +830,18 @@ void ServerThread(int id, ENetHost* server, bool* running)
 					AnimalsPacket* animals_pack = new AnimalsPacket();
 					*animals_pack = AnimalsP("", animals);
 
-#if LAG_ENABLED
+					if (is_lag_enabled)
+					{
 					std::function<void()> func = [c_peer, players_pack]() { SendMessageToPeer(c_peer.first, players_pack, c_peer.second); };
-					DelayedFunction(func, LAG_AMOUNT); 
+					DelayedFunction(func, lag_amount); 
 					std::function<void()> func2 = [c_peer, animals_pack]() { SendMessageToPeer(c_peer.first, animals_pack, c_peer.second); };
-					DelayedFunction(func2, LAG_AMOUNT);
-#else
-					SendMessageToPeer(c_peer.first, players_pack, c_peer.second);
-					SendMessageToPeer(c_peer.first, animals_pack, c_peer.second);
-#endif
+					DelayedFunction(func2, lag_amount);
+					}
+					else
+					{
+						SendMessageToPeer(c_peer.first, players_pack, c_peer.second);
+						SendMessageToPeer(c_peer.first, animals_pack, c_peer.second);
+					}
 				}
 			}
 		}
@@ -858,13 +854,15 @@ void ServerThread(int id, ENetHost* server, bool* running)
 		/* Wait up to 0 milliseconds for an event. */
 		if (enet_int > 0)
 		{
-
-#if LAG_ENABLED
+			if (is_lag_enabled)
+			{
 			std::function<void()> func = [event, server]() { HandleEvent(event, server); };
-			DelayedFunction(func, LAG_AMOUNT);
-#else
-			HandleEvent(event, server);
-#endif
+			DelayedFunction(func, lag_amount);
+			}
+			else
+			{
+				HandleEvent(event, server);
+			}
 
 		}
 		Sleep(1);
