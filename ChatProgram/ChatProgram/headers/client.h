@@ -14,7 +14,7 @@ ENetPeer * ConnectToHost(ENetHost* client, const char* server_address = "localho
 	ENetAddress address;
 	ENetEvent event;
 	ENetPeer *peer;
-	/* Connect to localhost:8888. */
+	/* Connect to server_address:8888. */
 	if (server_address != "")
 	{
 		enet_address_set_host(&address, server_address);
@@ -50,7 +50,6 @@ ENetPeer * ConnectToHost(ENetHost* client, const char* server_address = "localho
 		wprintw(win_system, "Connection to localhost:8888 failed.");
 	}
 
-	//DO THINGS HERE
 	return peer;
 }
 
@@ -69,88 +68,9 @@ ENetHost * CreateClient()
 
 		exit(EXIT_FAILURE);
 	}
-
-
-	//DO THINGS HERE
 	return client;
-
-	//enet_host_destroy(client);
 }
 
-/*void InputWindowThread(ENetPeer * peer, bool* running) //Not thread safe, do not use
-{
-	char name[20];
-	echo();
-	wgetstr(win_input, name);
-	noecho();
-
-	SendMessageToPeer(peer, &JoinP(name));
-
-	char * msg;
-
-	while (running)
-	{
-		wrefresh(win_input);
-
-		char input = wgetch(win_input);
-		switch (input)
-		{
-		case KEY_RESIZE:
-			//UpdateWindowSizes();
-			break;
-		case 'r':
-			break;
-		case 'w':
-			msg = new char[2]{ "w" };
-			SendMessageToPeer(peer, &MovementP(name, input));
-			break;
-		case 'a':
-			msg = new char[2]{ "a" };
-			SendMessageToPeer(peer, &MovementP(name, input));
-			break;
-		case 's':
-			msg = new char[2]{ "s" };
-			SendMessageToPeer(peer, &MovementP(name, input));
-			break;
-		case 'd':
-			msg = new char[2]{ "d" };
-			SendMessageToPeer(peer, &MovementP(name, input));
-			break;
-		case 't':
-
-			msg = new char[1000];
-
-			flushinp();
-			wprintw(win_input, "MSG:");
-			echo();
-
-			wgetstr(win_input, msg);
-
-			noecho();
-			wprintw(win_chat, "%s: %s\n", name, msg);
-
-			if (msg[0] == '/')
-			{
-				if (msg == "/quit")
-				{
-					running = false;
-					break;
-				}
-				if (msg == "/stop")
-				{
-					SendMessageToPeer(peer, &MessageP(name, msg));
-				}
-			}
-			else
-			{
-				SendMessageToPeer(peer, &MessageP(name, msg));
-			}
-			break;
-		default:
-			break;
-		}
-	}
-}*/
 bool typing = false;
 bool looking = false;
 bool digging = false;
@@ -204,7 +124,6 @@ void PlayerReconciliation(std::string name)
 	{
 		Direction direction = input.second;
 
-
 		switch (direction)
 		{
 		case NORTH:
@@ -214,7 +133,8 @@ void PlayerReconciliation(std::string name)
 			}
 			else if (tile_map[player->x][player->y - 1].type == DOOR)
 			{
-				//tile_map[player->x][player->y - 1].walkable = true;//Maybe remove?
+				//The next line is commented, because the client doesn't assume it can open doors.
+				//tile_map[player->x][player->y - 1].walkable = true;
 			}
 			break;
 		case WEST:
@@ -255,7 +175,7 @@ void PlayerReconciliation(std::string name)
 	}
 }
 
-void HandleInput(ENetPeer * peer, std::string name)
+bool HandleInput(ENetPeer * peer, std::string name)
 {
 	if (typing)
 	{
@@ -379,7 +299,6 @@ void HandleInput(ENetPeer * peer, std::string name)
 	}
 	else
 	{
-		//char * msg;
 		std::string str;
 
 		char input = wgetch(win_input);
@@ -440,6 +359,13 @@ void HandleInput(ENetPeer * peer, std::string name)
 			digging = true;
 			break;
 		}
+
+		case 'q':
+		{
+			wprintw(win_system, "\nQuitting.\n");
+			return 1;
+			break;
+		}
 			
 
 		default:
@@ -448,35 +374,36 @@ void HandleInput(ENetPeer * peer, std::string name)
 		}
 		
 	}
-	
+	return 0;
 }
 
+void DisconnectClient(ENetPeer* peer, ENetHost* client)
+{
+	ENetEvent event;
+	enet_peer_disconnect(peer, 0);
+	/* Allow up to 3 seconds for the disconnect to succeed
+	* and drop any packets received packets.
+	*/
+	while (enet_host_service(client, &event, 3000) > 0)
+	{
+		switch (event.type)
+		{
+		case ENET_EVENT_TYPE_RECEIVE:
+			enet_packet_destroy(event.packet);
+			break;
+		case ENET_EVENT_TYPE_DISCONNECT:
+			wprintw(win_system, "Disconnection succeeded.\n");
+			return;
+		}
+	}
+	/* We've arrived here, so the disconnect attempt didn't */
+	/* succeed yet.  Force the connection down.             */
+	enet_peer_reset(peer);
 
+}
 
 void ClientThread(int id, ENetHost* client, ENetPeer* peer, bool* running)
 {
-	//tile_map = new Tile[MAP_SIZE_X*MAP_SIZE_Y];
-	/*tile_map = new Tile*[MAP_SIZE_X];
-	for (int i = 0; i < MAP_SIZE_X; i++)
-	{
-		tile_map[i] = new Tile[MAP_SIZE_Y];
-	}*/
-	/*Packet* pack;
-	MessagePacket* msg_pack;
-	LookPacket* look_pack;
-	MovePacket* move_pack;
-	JoinPacket* join_pack;
-	MapPacket* map_pack;
-	PlayersPacket* players_pack;*/
-
-	/*Packet* pack = new Packet;
-	MessagePacket* msg_pack = new MessagePacket;
-	LookPacket* look_pack = new LookPacket;
-	MovePacket* move_pack = new MovePacket;
-	JoinPacket* join_pack = new JoinPacket;
-	MapPacket* map_pack = new MapPacket;*/
-	//Tile* tiles;
-	//PlayersPacket* players_pack = new PlayersPacket; 
 
 	ENetEvent event;
 	nodelay(win_input, true);
@@ -493,10 +420,15 @@ void ClientThread(int id, ENetHost* client, ENetPeer* peer, bool* running)
 
 	while (running)
 	{
-		HandleInput(peer, name);
-		//wprintw(win_system, "-W-");
+		if (HandleInput(peer, name))
+		{
+			DisconnectClient(peer, client);
+			running = false;
+		}
+
 		PlayerReconciliation(name);
 
+		//Calculate the correct offset for the map based on the player position
 		int pos_x = 0;
 		int pos_y = 0;
 		int offset_x = 0;
@@ -535,9 +467,10 @@ void ClientThread(int id, ENetHost* client, ENetPeer* peer, bool* running)
 
 		UpdateWindows();
 
+		//0 = Don't for wait for events
 		int enet_int = enet_host_service(client, &event, 0);
-		//MessagePacket msg_pack;
-		/* Wait up to 0 milliseconds for an event. */
+
+		//If an event was received
 		if (enet_int > 0)
 		{
 			switch (event.type)
@@ -548,9 +481,9 @@ void ClientThread(int id, ENetHost* client, ENetPeer* peer, bool* running)
 			case ENET_EVENT_TYPE_RECEIVE:
 
 				server_packet_sequence = ((Packet*)(event.packet->data))->sequence;
-				wprintw(win_system, "[S:%u,C:%u]\n", server_packet_sequence, client_packet_sequence);
-				//wprintw(win_system, "[%u]", server_packet_sequence);
 
+				//Prints the latest packet sequence number received from the server and the latest client packet sequence number
+				//wprintw(win_system, "[ServerState:%u, ClientState:%u]\n", server_packet_sequence, client_packet_sequence);
 
 				switch (((Packet*)(event.packet->data))->type)
 				{
@@ -618,14 +551,15 @@ void ClientThread(int id, ENetHost* client, ENetPeer* peer, bool* running)
 				break;
 
 			case ENET_EVENT_TYPE_DISCONNECT:
-				wprintw(win_system, "Lost connection to server.");
+				wprintw(win_system, "Lost connection to server. Exiting.\n");
 				running = false;
+				UpdateWindows();
+				Sleep(500);
 				break;
 			}
 
 			/* Clean up the packet now that we're done using it. */
 			enet_packet_destroy(event.packet);
 		}
-		//Sleep(10);
 	}
 }

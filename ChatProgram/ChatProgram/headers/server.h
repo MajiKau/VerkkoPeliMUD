@@ -8,14 +8,15 @@
 #include "file_reader.h"
 #include "delayfunc.h"
 
+enet_uint16 default_port = 8888;
+
 bool is_lag_enabled = false; //Simulated lag
-float lag_amount = 0.040f;
+float lag_amount = 0.25f; //Amount of simulated lag in seconds. The lag client experiences will be twice this
 
 float server_send_rate = 1.0f / 20.0f; //Server sends clients player and animal data 20 times a second.
 
 int spawnpoint_x = 1;
 int spawnpoint_y = 1;
-
 
 std::vector<std::pair<unsigned int, unsigned int>> animal_spawnpoints;
 int animal_spawnpoint_x = 1;
@@ -176,7 +177,7 @@ void UpdateTile(int x, int y, Tile tile)
 			if (is_lag_enabled)
 			{
 				std::function<void()> func = [c_peer, tile_pack]() { SendMessageToPeer(c_peer.first, tile_pack, c_peer.second); };
-				DelayedFunction(func, lag_amount);
+				DF::DelayedFunction(func, lag_amount);
 			}
 			else
 			{
@@ -585,7 +586,7 @@ void DisconnectPeer(ENetPeer* peer, ENetHost* client)
 			enet_packet_destroy(event.packet);
 			break;
 		case ENET_EVENT_TYPE_DISCONNECT:
-			wprintw(win_system, "Disconnection succeeded.");
+			wprintw(win_system, "Disconnection succeeded.\n");
 			return;
 		}
 	}
@@ -619,11 +620,7 @@ void HandleEvent(ENetEvent event, ENetHost* server)
 
 		Packet* pack = (Packet*)event.packet->data;
 
-		wprintw(win_system, "A packet[%u] of length %u was received from %s on channel %u.\n",
-			pack->sequence,
-			(unsigned int)event.packet->dataLength,
-			pack->sender,
-			event.channelID);
+		
 
 		sequence = pack->sequence;
 
@@ -653,7 +650,7 @@ void HandleEvent(ENetEvent event, ENetHost* server)
 				if (is_lag_enabled)
 				{
 					std::function<void()> func = [c_peer, msg_pack]() { SendMessageToPeer(c_peer.first, msg_pack, c_peer.second); };
-					DelayedFunction(func, lag_amount);
+					DF::DelayedFunction(func, lag_amount);
 				}
 				else
 				{
@@ -677,7 +674,7 @@ void HandleEvent(ENetEvent event, ENetHost* server)
 				if (is_lag_enabled)
 				{
 					std::function<void()> func = [peer, message, sequence]() { SendMessageToPeer(peer, &MessageP("[Movement]", message), sequence); };
-					DelayedFunction(func, lag_amount);
+					DF::DelayedFunction(func, lag_amount);
 				}
 				else
 				{
@@ -698,7 +695,7 @@ void HandleEvent(ENetEvent event, ENetHost* server)
 				if (is_lag_enabled)
 				{
 					std::function<void()> func = [peer, message, sequence]() { SendMessageToPeer(peer, &MessageP("[Look]", message), sequence); };
-					DelayedFunction(func, lag_amount);
+					DF::DelayedFunction(func, lag_amount);
 				}
 				else
 				{
@@ -724,7 +721,7 @@ void HandleEvent(ENetEvent event, ENetHost* server)
 			if (is_lag_enabled)
 			{
 				std::function<void()> func = [peer, map_pack, sequence]() { SendMessageToPeer(peer, map_pack, sequence); };
-				DelayedFunction(func, lag_amount);
+				DF::DelayedFunction(func, lag_amount);
 			}
 			else
 			{
@@ -742,7 +739,7 @@ void HandleEvent(ENetEvent event, ENetHost* server)
 				if (is_lag_enabled)
 				{
 				std::function<void()> func = [peer, message, sequence]() { SendMessageToPeer(peer, &MessageP("[Look]", message), sequence); };
-				DelayedFunction(func, lag_amount);
+				DF::DelayedFunction(func, lag_amount);
 				}
 				else
 				{
@@ -761,6 +758,11 @@ void HandleEvent(ENetEvent event, ENetHost* server)
 
 		}
 
+		wprintw(win_system, "A packet[%u] of length %u was received from %s on channel %u.\n",
+			pack->sequence,
+			(unsigned int)event.packet->dataLength,
+			pack->sender,
+			event.channelID);
 
 		/* Clean up the packet now that we're done using it. */
 		enet_packet_destroy(event.packet);
@@ -781,7 +783,37 @@ void HandleEvent(ENetEvent event, ENetHost* server)
 	}
 }
 
-
+bool HandleInputServer(ENetHost* server)
+{
+	char input = wgetch(win_input);
+	switch (input)
+	{
+	case 'l':
+	{
+		is_lag_enabled = !is_lag_enabled;
+		if (is_lag_enabled)
+		{
+			wprintw(win_chat, "Simulated lag enabled [%.2f seconds]\n", 2*lag_amount);
+			DF::ClearFunctionQueue();
+		}
+		else
+		{
+			wprintw(win_chat, "Simulated lag disabled\n");
+		}
+		break;
+	}
+	case 'q':
+	{
+		for (auto peer : connected_peers)
+		{
+			DisconnectPeer(peer.first, server);
+		}
+		return 1;
+		break;
+	}
+	}
+	return 0;
+}
 
 void ServerThread(int id, ENetHost* server, bool* running)
 {
@@ -791,24 +823,30 @@ void ServerThread(int id, ENetHost* server, bool* running)
 	char c2 = (char)177;
 	char c3 = (char)178;
 	char c4 = (char)219;
-	wprintw(win_system, "%c(%i),%c(%i),%c(%i),%c(%i)\n", c1, c1, c2, c2, c3, c3, c4, c4);
-
+	//wprintw(win_system, "%c(%i),%c(%i),%c(%i),%c(%i)\n", c1, c1, c2, c2, c3, c3, c4, c4);
+	wprintw(win_extra, "L to toggle simulated lag\n");
+	wprintw(win_extra, "Q to stop the server\n");
 
 	clock_t current_time = clock();
 	clock_t previous_time = current_time;
 
+
 	while (running)
 	{
+		if (HandleInputServer(server))
+		{
+			running = false;
+		}
+
 		previous_time = current_time;
 		current_time = clock();
 		deltatime = (float)(current_time - previous_time) / CLOCKS_PER_SEC;
-		//wprintw(win_system, "Deltatime:%f\n", deltatime);
 
 		UpdateAnimals(deltatime);
 
 		if (is_lag_enabled)
 		{
-			DelayedFunctionUpdate(deltatime);
+			DF::DelayedFunctionUpdate(deltatime);
 		}
 
 
@@ -817,6 +855,7 @@ void ServerThread(int id, ENetHost* server, bool* running)
 		PrintAnimals(animals, 0, 0);
 		UpdateWindows();
 
+		//Send player and animal data to clients
 		if (send_players_cooldown < 0.0f)
 		{
 			send_players_cooldown = server_send_rate;
@@ -833,9 +872,9 @@ void ServerThread(int id, ENetHost* server, bool* running)
 					if (is_lag_enabled)
 					{
 					std::function<void()> func = [c_peer, players_pack]() { SendMessageToPeer(c_peer.first, players_pack, c_peer.second); };
-					DelayedFunction(func, lag_amount); 
+					DF::DelayedFunction(func, lag_amount);
 					std::function<void()> func2 = [c_peer, animals_pack]() { SendMessageToPeer(c_peer.first, animals_pack, c_peer.second); };
-					DelayedFunction(func2, lag_amount);
+					DF::DelayedFunction(func2, lag_amount);
 					}
 					else
 					{
@@ -857,7 +896,7 @@ void ServerThread(int id, ENetHost* server, bool* running)
 			if (is_lag_enabled)
 			{
 			std::function<void()> func = [event, server]() { HandleEvent(event, server); };
-			DelayedFunction(func, lag_amount);
+			DF::DelayedFunction(func, lag_amount);
 			}
 			else
 			{

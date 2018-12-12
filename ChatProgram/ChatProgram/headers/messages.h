@@ -367,31 +367,3 @@ void SendMessageToPeer(ENetPeer* peer, Packet* package, unsigned int sequence_nu
 		break;
 	}
 }
-
-
-//void _SendPackageToPeer(ENetPeer* peer, std::string message = "Test Package")
-//{
-	/* Create a reliable packet of size 7 containing "packet\0" */
-	//ENetPacket * packet = enet_packet_create("packet",
-	//	strlen("packet") + 1,
-	//	ENET_PACKET_FLAG_RELIABLE);
-	/* Extend the packet so and append the string "foo", so it now */
-	/* contains "packetfoo\0"                                      */
-	//enet_packet_resize(packet, strlen("packetfoo") + 1);
-	//strcpy(&packet->data[strlen("packet")], "foo");
-	/* Send the packet to the peer over channel id 0. */
-	/* One could also broadcast the packet by         */
-	/* enet_host_broadcast (host, 0, packet);         */
-
-	///ENetPacket * packet = enet_packet_create(message.c_str(),
-	///	sizeof(message),
-	///	ENET_PACKET_FLAG_RELIABLE);
-	///enet_peer_send(peer, 0, packet);
-
-
-	//DO THINGS HERE
-	//DisconnectPeer(peer);
-
-	/* One could just use enet_host_service() instead. */
-	//enet_host_flush(host);
-//}

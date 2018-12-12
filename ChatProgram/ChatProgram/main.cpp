@@ -42,6 +42,7 @@ int main(int argc, char ** argv)
 	wprintw(win_map, "This is the map window.\n");
 	wprintw(win_extra, "This is the extra window.\n");
 	wprintw(win_chat, "This is the chat window.\n");
+	wprintw(win_player, "This is the player data window.\n");
 
 	if (enet_initialize() != 0)
 	{
@@ -49,7 +50,7 @@ int main(int argc, char ** argv)
 		return EXIT_FAILURE;
 	}
 
-	wprintw(win_system, "1:Server || 2:Client\n");
+	wprintw(win_input, "1:Server || 2:Client\n");
 
 	UpdateWindows();
 
@@ -57,7 +58,10 @@ int main(int argc, char ** argv)
 
 	if (input == '1')
 	{
+		wprintw(win_player, "Port is 8888\n");
+
 		ENetHost* server = CreateServer();
+		nodelay(win_input, true);
 		std::thread server_thread(ServerThread, 0, server, &running);
 
 		server_thread.join();

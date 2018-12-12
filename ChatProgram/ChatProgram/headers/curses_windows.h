@@ -4,15 +4,10 @@
 #include "game_structs.h"
 
 WINDOW * win_system;
-//WINDOW * win_system_borders;
 WINDOW * win_input;
-//WINDOW * win_input_borders;
 WINDOW * win_map;
-//WINDOW * win_map_borders;
 WINDOW * win_extra;
-//WINDOW * win_extra_borders;
 WINDOW * win_chat;
-//WINDOW * win_chat_borders;
 WINDOW * win_player;
 
 std::vector<WINDOW*> windows;
@@ -34,21 +29,7 @@ std::vector<WINDOW*> window_borders;
 #define MAP_WIN_SIZE_X 93
 #define MAP_WIN_SIZE_Y 54
 
-int my_print(WINDOW * win, const char * str, ...)
-{
-	
-	int ret;
-
-	va_list args;
-	va_start(args, str);
-
-	ret = vwprintw(win, str, args);
-	wrefresh(win);
-
-	va_end(args);
-
-	return ret;
-}
+SYSTEMTIME* sys_time = new SYSTEMTIME();
 
 void PrintMap(std::vector<std::vector<Tile>> &map, int offset_x, int offset_y)
 {
@@ -222,6 +203,7 @@ void PrintPlayerData(Player player)
 	wprintw(win_player, "Name: %s\nScore: %d\nDirt: %d\n", player.name, player.score, player.dirt_dug);
 }
 
+
 void PrintAnimals(Animal animals[MAX_ANIMALS], int offset_x, int offset_y)
 {
 	wattron(win_map, COLOR_PAIR(TERM_COLOR_PLAYER));
@@ -235,13 +217,10 @@ void PrintAnimals(Animal animals[MAX_ANIMALS], int offset_x, int offset_y)
 	wattroff(win_map, COLOR_PAIR(TERM_COLOR_PLAYER));
 }
 
-SYSTEMTIME* sys_time = new SYSTEMTIME();
 void UpdateWindows()
 {
 	if (is_termresized())
 	{
-		
-		//resize_term(0, 0);
 		resize_term(0, 0);
 		UpdateWindowSizes();
 		SP->resized = false;
@@ -251,7 +230,8 @@ void UpdateWindows()
 	wclear(win_extra);
 
 	//wattron(win_extra, A_BLINK);
-	my_print(win_extra, "%02i:%02i:%02i | %02i.%02i.%04i\n", sys_time->wHour, sys_time->wMinute, sys_time->wSecond, sys_time->wDay, sys_time->wMonth, sys_time->wYear);
+	wprintw(win_extra, "%02i:%02i:%02i | %02i.%02i.%04i\n", sys_time->wHour, sys_time->wMinute, sys_time->wSecond, sys_time->wDay, sys_time->wMonth, sys_time->wYear);
+	wprintw(win_extra, "\nW/A/S/D to move. L+Direction to look, K+Direction to dig/fill a hole.\n Walk into a door to open it. Dig holes under animals to score points.\nT to talk.");
 	//wattroff(win_extra, A_BLINK);
 
 	refresh();
@@ -285,10 +265,8 @@ WINDOW * MakeWindowWithBorders(int h, int w, int y, int x, bool auto_scroll = tr
 
 void InitWindows()
 {
-
 	window_borders = std::vector<WINDOW*>();
 	windows = std::vector<WINDOW*>();
-
 
 	initscr();
 	resize_term(70, 190);
@@ -325,9 +303,7 @@ void InitWindows()
 	curs_set(0);
 
 	start_color();
-	PDC_set_blink(true);
-
-
+	PDC_set_blink(true); //Blinking text only works while waiting for input.
 
 	init_pair(TERM_COLOR_DEFAULT, COLOR_WHITE, COLOR_BLACK);
 	init_pair(TERM_COLOR_GRASS, COLOR_BLACK, COLOR_GREEN);

@@ -84,13 +84,9 @@ struct Tile
 
 
 std::vector<std::vector<Tile>> tile_map(MAP_SIZE_X, std::vector<Tile>(MAP_SIZE_Y, Tile()));
-//Tile tile_map[MAP_SIZE_X][MAP_SIZE_Y];
-//Tile** tile_map;
-//Tile* tile_map;
 
 int num_of_players = 0;
 Player players[MAX_PLAYERS];
 Player players_copy[MAX_PLAYERS];
 
 Animal animals[MAX_ANIMALS];
-//std::vector<Animal> animals;

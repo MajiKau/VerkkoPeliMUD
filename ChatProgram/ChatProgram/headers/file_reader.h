@@ -23,8 +23,6 @@ std::vector<std::string> MY_ReadFile(std::string filename)
 	return data;
 }
 
-
-
 std::vector<std::vector<char>> LoadMap(std::string filename)
 {
 	std::vector<std::vector<char>> map;
